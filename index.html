@@ -1,0 +1,1924 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Karteikasten – Vokabeltrainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style id="app-style">
+:root{
+  --paper:#FBFCFE; --bg:#E9EEF5; --ink:#1F3A5F; --text:#2B2D31; --muted:#66707E;
+  --rule:#CFE0F5; --margin:#E04B4B; --hi:#FFE45C; --ok:#2E8B57; --bad:#C8423A;
+  --line:#D3DAE4; --btn:#1F3A5F; --btntext:#FFFFFF;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#1E2633; --bg:#131922; --ink:#9CC1F0; --text:#E4E8EE; --muted:#9AA4B2;
+    --rule:#2C3A4F; --margin:#E86A6A; --hi:#8A7A1E; --ok:#5CC08A; --bad:#EE7A72;
+    --line:#2E3847; --btn:#9CC1F0; --btntext:#10161F; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#1E2633; --bg:#131922; --ink:#9CC1F0; --text:#E4E8EE; --muted:#9AA4B2;
+  --rule:#2C3A4F; --margin:#E86A6A; --hi:#8A7A1E; --ok:#5CC08A; --bad:#EE7A72;
+  --line:#2E3847; --btn:#9CC1F0; --btntext:#10161F; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:17px;line-height:1.5}
+.wrap{max-width:760px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:2.3rem;line-height:1.05;margin:0 0 6px;color:var(--ink);font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.5rem;margin:0 0 4px;color:var(--ink);font-weight:800}
+p.sub{margin:0 0 22px;color:var(--muted)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;border-radius:10px;padding:10px 16px;background:var(--btn);color:var(--btntext);font-weight:600}
+button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+button.danger{background:transparent;color:var(--bad);border:1.5px solid var(--line)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--hi);outline-offset:2px}
+button:disabled{opacity:.45;cursor:default}
+input,select,textarea{background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+textarea{min-height:120px;resize:vertical}
+label{font-size:.9rem;color:var(--muted);display:block;margin-bottom:4px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.row>*{flex:1 1 160px}
+.row>button{flex:0 0 auto}
+.panel{background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px}
+.status{font-size:.85rem;color:var(--muted);margin-bottom:18px;min-height:1.3em}
+
+/* Deck list: tabbed index cards */
+.decks{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));margin-bottom:22px}
+.deck{position:relative;text-align:left;background:var(--paper);color:var(--text);border:1.5px solid var(--line);border-radius:4px 14px 14px 14px;padding:16px 16px 14px;font-weight:400}
+.deck::before{content:"";position:absolute;top:-11px;left:-1.5px;width:42%;height:12px;background:var(--paper);border:1.5px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0}
+.deck .nm{font-weight:800;font-size:1.15rem;color:var(--ink);display:block}
+.deck .lp{color:var(--muted);font-size:.9rem}
+.deck .due{display:inline-block;margin-top:10px;padding:1px 8px;border-radius:6px;background:var(--hi);color:var(--text);font-size:.85rem;font-weight:600}
+.deck .due.none{background:transparent;color:var(--muted);padding:0}
+
+/* Leitner boxes */
+.boxes{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:14px 0 4px}
+.bx{text-align:center;font-size:.8rem;color:var(--muted)}
+.bx .bar{height:54px;border:1.5px solid var(--line);border-radius:6px;display:flex;align-items:flex-end;overflow:hidden;background:var(--bg)}
+.bx .fill{width:100%;background:var(--ink);opacity:.85}
+.bx b{display:block;color:var(--text);font-size:.95rem}
+
+/* word list */
+.words{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto}
+.words li{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line)}
+.words .w{font-family:Kalam,"Comic Sans MS",cursive;font-size:1.15rem}
+.words .b{font-size:.75rem;color:var(--muted)}
+.icon{background:transparent;color:var(--muted);padding:4px 8px;border-radius:6px}
+.icon:hover{color:var(--bad)}
+
+/* The study card – the memorable thing */
+.stage{perspective:1400px;margin:10px 0 18px}
+.card{position:relative;width:100%;min-height:260px;transform-style:preserve-3d;transition:transform .5s cubic-bezier(.3,.7,.3,1);cursor:pointer}
+.card.flipped{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;border-radius:6px;box-shadow:0 2px 0 var(--line),0 10px 24px -14px rgba(20,40,80,.45);
+  background:linear-gradient(var(--paper) 0 54px,var(--margin) 54px 56px,transparent 56px),
+             repeating-linear-gradient(var(--paper) 0 33px,var(--rule) 33px 34px);
+  background-color:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:66px 22px 22px;text-align:center}
+.face.back{transform:rotateY(180deg)}
+.face .lang{position:absolute;top:16px;left:20px;font-size:.85rem;color:var(--muted)}
+.face .word{font-family:Kalam,"Comic Sans MS",cursive;font-size:clamp(2rem,7vw,3rem);line-height:1.15;color:var(--ink);font-weight:700;word-break:break-word}
+.face .hint{position:absolute;bottom:14px;font-size:.8rem;color:var(--muted)}
+.static .face{position:relative;min-height:240px}
+.progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:8px}
+.progress i{display:block;height:100%;background:var(--ink);transition:width .3s}
+.meta{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+.choices{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.choices button{background:var(--paper);color:var(--text);border:1.5px solid var(--line);font-family:Kalam,cursive;font-size:1.2rem;padding:14px;font-weight:400}
+.choices button.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 16%,var(--paper))}
+.choices button.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 16%,var(--paper))}
+.feedback{min-height:1.6em;margin:10px 0;font-weight:600}
+.feedback.ok{color:var(--ok)} .feedback.bad{color:var(--bad)}
+.answerbtns{display:flex;gap:10px}
+.answerbtns button{flex:1;padding:14px}
+.answerbtns .no{background:var(--bad);color:#fff}
+.answerbtns .yes{background:var(--ok);color:#fff}
+.modes{display:flex;gap:8px;flex-wrap:wrap}
+.tabs{display:flex;gap:6px;margin:0 0 14px;flex-wrap:wrap}
+.tabs button{background:transparent;color:var(--muted);border:1.5px solid var(--line);padding:6px 12px;font-size:.9rem}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--btntext);border-color:var(--ink)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}
+.empty{color:var(--muted);text-align:center;padding:24px 8px}
+.big{font-size:3rem;font-weight:800;color:var(--ink);line-height:1}
+@media (max-width:520px){.choices{grid-template-columns:1fr}.words li{grid-template-columns:1fr 1fr auto}h1{font-size:1.9rem}}
+@media (prefers-reduced-motion:reduce){.card{transition:none}}
+.vars{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.vars .v{display:flex;gap:6px}
+.vars .v input{flex:1}
+.addvar{background:transparent;color:var(--ink);border:1.5px dashed var(--line);padding:4px 10px;font-size:.85rem;font-weight:600;align-self:flex-start}
+.field{flex:1 1 220px;display:flex;flex-direction:column}
+.also{font-size:.95rem;color:var(--muted);margin-top:6px}
+.words .alt{display:block;font-family:"Bricolage Grotesque",system-ui,sans-serif;font-size:.8rem;color:var(--muted)}
+.words li.editing{display:block}
+.pick{display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));margin:10px 0}
+.pick label{display:flex;gap:8px;align-items:center;color:var(--text);font-size:.95rem;margin:0;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;cursor:pointer}
+.pick input{width:auto;margin:0;accent-color:var(--ink)}
+.small{font-size:.85rem;color:var(--muted)}
+.check{display:flex;gap:8px;align-items:center;color:var(--text);margin:8px 0 0;font-size:.95rem}
+.check input{width:auto;margin:0;accent-color:var(--ink)}
+.chap{font-size:.8rem;color:var(--muted)}
+.rules{display:grid;gap:4px;margin-top:8px}
+.rules .check{margin:0;padding:6px 2px}
+.rules .check.dis{opacity:.45}
+.rules .check.inherit{font-weight:600;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:4px}
+.crumb{font-size:.9rem;color:var(--muted);margin:0 0 2px}
+.crumb button{background:none;border:0;padding:0;color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.decks.subs{margin:12px 0 14px}
+.pick label.lvl1{margin-left:22px}.pick label.lvl2{margin-left:44px}.pick label.lvl3{margin-left:66px}
+.pick{grid-template-columns:1fr}
+.vrows{display:flex;flex-direction:column;gap:12px}
+.rules{display:grid;gap:4px 16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin-top:8px}
+.rules.off{opacity:.5}
+.tree label{margin-left:calc(var(--lvl,0) * 22px)}
+.pick.tree{grid-template-columns:1fr}
+.crumb{font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.crumb button{background:none;color:var(--ink);padding:0;font-weight:600;font-size:.85rem;border-radius:4px}
+.subs{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));margin:18px 0 14px}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.vgrid{display:flex;flex-direction:column;gap:8px}
+.vhead{font-size:.8rem;color:var(--muted)}
+.art{padding:10px 8px}
+.artmain{display:grid;grid-template-columns:76px 1fr;gap:6px}
+.tree{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.tree label{display:flex;gap:8px;align-items:center;color:var(--text);font-size:.95rem;margin:0;padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;cursor:pointer}
+.tree input{width:auto;margin:0;accent-color:var(--ink)}
+details.rules summary{cursor:pointer;font-weight:800;color:var(--ink);font-size:1.15rem}
+details.rules[open] summary{margin-bottom:10px}
+.rulelist .check.dim{opacity:.55}
+.crumb{font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.ansrow{display:grid;grid-template-columns:90px 1fr auto;gap:8px;align-items:end}
+.ansrow.noart{grid-template-columns:1fr auto}
+.rowhead,.vrow{display:grid;grid-template-columns:1fr 1fr 70px;gap:8px;align-items:center}
+.rowhead{font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.vrow{margin-bottom:8px}
+.pair{display:flex;gap:4px;min-width:0}
+.pair .art{flex:0 0 74px;width:74px;padding:10px 8px;font-size:.95rem}
+.pair .wd{flex:1;min-width:0}
+.settings label.check{margin:6px 0}
+.settings label.check.off{opacity:.55}
+details.panel>summary{cursor:pointer;font-weight:800;color:var(--ink);font-size:1.15rem;list-style:none}
+details.panel>summary::-webkit-details-marker{display:none}
+details.panel>summary::after{content:" ▾";color:var(--muted);font-weight:400}
+details.panel[open]>summary{margin-bottom:12px}
+.sublist{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.sublist .sr{display:flex;gap:6px;align-items:center}
+.sublist .sr input{flex:1}
+.tree{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.tree .grp{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px}
+.tree label{display:flex;gap:8px;align-items:center;color:var(--text);font-size:.95rem;margin:0;cursor:pointer}
+.tree .grp>label{font-weight:700}
+.tree .kids{display:flex;flex-wrap:wrap;gap:6px 16px;margin:6px 0 2px 26px}
+.tree .kids label{font-weight:400}
+.tree input{width:auto;margin:0;accent-color:var(--ink)}
+.subhead{font-weight:700;color:var(--ink);margin:14px 0 4px;font-size:.95rem}
+.titleedit{display:grid;gap:8px;grid-template-columns:2fr 1fr 1fr;margin-bottom:12px}
+.ttl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width:560px){.rowhead{display:none}.vrow{grid-template-columns:1fr 34px;border-bottom:1px solid var(--line);padding-bottom:8px}.vrow .pair{grid-column:1}.vrow .rbtn{grid-column:2;grid-row:1/span 4;flex-direction:column}.vrow>.sp{display:none}.titleedit{grid-template-columns:1fr}}
+.conjgrid{display:grid;grid-template-columns:minmax(90px,170px) 1fr 34px;gap:6px 8px;align-items:center}
+.conjgrid .lbl{font-family:Kalam,"Comic Sans MS",cursive;font-size:1.1rem;color:var(--ink)}
+.conjq{display:grid;grid-template-columns:minmax(80px,150px) 1fr;gap:8px 10px;align-items:center;margin-bottom:10px}
+.conjq .lbl{font-family:Kalam,"Comic Sans MS",cursive;font-size:1.2rem;color:var(--ink);text-align:right}
+.conjq input.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--paper))}
+.conjq input.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--paper))}
+.conjq .sol{grid-column:2;font-size:.9rem;margin-top:-4px;color:var(--bad)}
+.conjq .sol.ok{color:var(--ok)}
+.ctable{width:100%;border-collapse:collapse;font-size:.95rem}
+.ctable td{padding:2px 8px 2px 0;vertical-align:top}
+.ctable td:first-child{color:var(--muted);white-space:nowrap}
+.citem{border-bottom:1px solid var(--line);padding:10px 2px}
+.citem .hd{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.citem .w{font-family:Kalam,"Comic Sans MS",cursive;font-size:1.2rem}
+@media (max-width:560px){.conjgrid{grid-template-columns:90px 1fr 30px}.conjq{grid-template-columns:80px 1fr}}
+.words.sel li{grid-template-columns:24px 1fr 1fr auto}
+.words input[type=checkbox],.subhead input{width:auto;margin:0;accent-color:var(--ink)}
+.subhead label{display:flex;gap:8px;align-items:center;color:var(--ink);font-size:.95rem;margin:0;cursor:pointer}
+.movebar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);border:1.5px solid var(--ink);border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.movebar>*{flex:0 0 auto}
+.movebar .grow{flex:1 1 180px}
+.conf{border:1.5px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.conf .opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.conf label{display:block;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;margin:0;color:var(--text);cursor:pointer}
+.conf label:has(input:checked){border-color:var(--ink);background:color-mix(in srgb,var(--ink) 8%,var(--paper))}
+.conf input{width:auto;margin:0 6px 0 0;accent-color:var(--ink)}
+.conf .t{font-family:Kalam,"Comic Sans MS",cursive;font-size:1.1rem}
+@media (max-width:560px){.conf .opts{grid-template-columns:1fr}}
+.chars{position:fixed;top:calc(env(safe-area-inset-top,0px) + 16px);width:156px;max-height:calc(100vh - 32px - env(safe-area-inset-top,0px));overflow:auto;background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:10px;z-index:20}
+.chars.left{left:12px}
+.chars.right{right:12px}
+.chars .chd{display:flex;gap:4px;align-items:center}
+.chars select{padding:6px;font-size:.85rem;flex:1;min-width:0}
+.chars .up{padding:6px 8px;font-size:.85rem;background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.chars .up[aria-pressed="true"]{background:var(--ink);color:var(--btntext);border-color:var(--ink)}
+.chars .ks{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:8px}
+.chars .ks button{padding:7px 0;background:var(--bg);color:var(--text);border:1px solid var(--line);font-size:1.08rem;font-weight:400;border-radius:7px;font-family:"Bricolage Grotesque",system-ui,sans-serif}
+.chars .ks button:hover{border-color:var(--ink)}
+.chars .gl{grid-column:1/-1;font-size:.72rem;color:var(--muted);margin-top:6px;font-weight:600}
+.chars .cap{font-size:.72rem;color:var(--muted);margin:0 0 6px}
+.charsToggle{display:none}
+.sortbar{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin:-6px 0 12px}
+.sortbar label{margin:0}
+.sortbar select{width:auto;padding:6px 10px;font-size:.9rem}
+.langhead{font-weight:800;color:var(--ink);margin:4px 0 16px;font-size:1rem}
+@media (max-width:1159px){
+  .chars{display:none}
+  .chars.open{display:block;top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 70px);width:auto;max-height:38vh;box-shadow:0 10px 30px -10px rgba(0,0,0,.35)}
+  .chars.left.open{left:8px;right:calc(50% + 4px)}
+  .chars.right.open{right:8px;left:calc(50% + 4px)}
+  .chars .ks{grid-template-columns:repeat(auto-fill,minmax(36px,1fr))}
+  .charsToggle{display:block;position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:21;border-radius:999px;padding:12px 18px;box-shadow:0 6px 18px -6px rgba(0,0,0,.4)}
+  .wrap{padding-bottom:90px}
+}
+.vrow .rbtn{display:flex;gap:2px;justify-content:flex-end}
+.vrow .rbtn [aria-pressed="true"]{color:var(--btntext);background:var(--ink)}
+.vrow .p2 input{border-style:dashed}
+.vrow .p2{position:relative}
+.vrow .p2::before{content:"/";position:absolute;left:-7px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:700}
+.ins{display:block;width:100%;background:transparent;color:var(--muted);border:0;padding:0;height:16px;line-height:16px;font-size:.75rem;font-weight:600;opacity:0;transition:opacity .15s;border-radius:6px}
+.ins:hover,.ins:focus-visible{opacity:1;background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.insli{display:block!important;padding:0!important;border:0!important}
+.conjgrid .ins{grid-column:1/-1}
+@media (hover:none){.ins{opacity:.55}}
+.sbdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--muted);margin-right:6px;vertical-align:middle}
+.sbdot.live{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
+.sbdot.err{background:var(--bad)}
+.sbdot.busy{background:var(--hi)}
+.linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;font-weight:400;font-size:.85rem}
+.clslist{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));margin:10px 0 14px}
+.cls{text-align:left;background:var(--paper);color:var(--text);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-weight:400}
+.cls .nm{display:block;font-weight:800;color:var(--ink);font-size:1.05rem}
+.role{display:inline-block;font-size:.75rem;font-weight:700;padding:1px 8px;border-radius:6px;background:var(--bg);color:var(--muted);margin-top:6px}
+.role.t{background:var(--ink);color:var(--btntext)}
+.bigcode{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:clamp(2rem,9vw,3.2rem);font-weight:800;letter-spacing:.12em;color:var(--ink);margin:4px 0 8px;user-select:all}
+.studs{list-style:none;margin:0;padding:0}
+.studs li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--line)}
+.studs .when{font-size:.8rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script type="application/json" id="embedded-decks">null</script>
+<script id="app-script">
+(() => {
+const LS_KEY = "karteikasten-decks-v1";      // gleicher Speicher wie vorher → alte Daten bleiben
+const SET_KEY = "karteikasten-settings-v1";
+const INTERVALS = [0, 1, 3, 7, 14];
+const DAY = 86400000;
+const DEF = { article:true, case:false, accents:true, oRoof:true, allRoofs:false, apos:true, spaces:true, brackets:true, punct:true, commaSplit:true, typo:false };
+const LABELS = [
+  ["article",   "Artikel muss mitgeschrieben werden (wenn einer eingetragen ist)"],
+  ["case",      "Groß- und Kleinschreibung beachten"],
+  ["accents",   "Akzente müssen stimmen (é, è, à, ç …)"],
+  ["oRoof",     "ô darf ohne Dach geschrieben werden"],
+  ["allRoofs",  "Alle Dächer (â ê î ô û) dürfen fehlen"],
+  ["apos",      "Apostroph muss stimmen"],
+  ["spaces",    "Leerzeichen zählen nicht"],
+  ["brackets",  "Wörter in Klammern sind optional"],
+  ["punct",     "Satzzeichen (. ! ?) zählen nicht"],
+  ["commaSplit","Komma und / trennen Varianten (wie ;)"],
+  ["typo",      "Ein kleiner Tippfehler zählt als richtig"],
+];
+const ARTS = {
+  deutsch:["der","die","das","den","dem","des","ein","eine","einen"],
+  franz:["le","la","les","l'","l’","un","une","des","du"],
+  engl:["the","a","an"],
+  span:["el","la","los","las","un","una"],
+  ital:["il","lo","la","i","gli","le","l'","l’","un","uno","una"],
+  latein:[]
+};
+const PRESETS = [
+  { id:"p-de", name:"Deutsch (ich, du, er …)", labels:["ich","du","er/sie/es","wir","ihr","sie/Sie"], lang:"deutsch" },
+  { id:"p-fr", name:"Französisch (je, tu, il …)", labels:["je","tu","il/elle/on","nous","vous","ils/elles"], lang:"franz" },
+  { id:"p-en", name:"Englisch (I, you, he …)", labels:["I","you","he/she/it","we","you","they"], lang:"engl" },
+  { id:"p-es", name:"Spanisch (yo, tú, él …)", labels:["yo","tú","él/ella/usted","nosotros","vosotros","ellos/ustedes"], lang:"span" },
+  { id:"p-it", name:"Italienisch (io, tu, lui …)", labels:["io","tu","lui/lei","noi","voi","loro"], lang:"ital" },
+  { id:"p-la", name:"Latein (1. Sg. … 3. Pl.)", labels:["1. Sg.","2. Sg.","3. Sg.","1. Pl.","2. Pl.","3. Pl."], lang:"latein" },
+  { id:"p-case-de", name:"Fälle Deutsch (Sg. + Pl.)", labels:["Nom. Sg.","Gen. Sg.","Dat. Sg.","Akk. Sg.","Nom. Pl.","Gen. Pl.","Dat. Pl.","Akk. Pl."] },
+  { id:"p-case-la", name:"Fälle Latein (Sg. + Pl.)", labels:["Nom. Sg.","Gen. Sg.","Dat. Sg.","Akk. Sg.","Abl. Sg.","Nom. Pl.","Gen. Pl.","Dat. Pl.","Akk. Pl.","Abl. Pl."] },
+  { id:"p-empty", name:"Leer – eigene Formen", labels:["","",""] },
+];
+const defaultPreset = d => { const l = String(d.to).toLowerCase(); return (PRESETS.find(p => p.lang && l.includes(p.lang)) || PRESETS[0]).id; };
+const allSchemas = d => [...d.schemas, ...PRESETS];
+let decks = [];
+let legacy = {};
+let db = null, uid = null, downloads = null;
+let view = { name:"home" };
+let saveTimers = {};
+const app = document.getElementById("app");
+
+const uidGen = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const now = () => Date.now();
+const isDue = c => (c.due || 0) <= now();
+const deckOf = id => decks.find(d => d.id === id);
+const shuffle = a => { a = a.slice(); for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; };
+const subOf = (d,c) => d.subs.find(s => s.id === c.sub);
+const keyOf = (d,c) => d.id + "|" + (subOf(d,c) ? c.sub : "");
+const disp = (art, w) => !art ? w : art + (/['’]$/.test(art) ? "" : " ") + w;
+const pdisp = (a, w, a2, w2) => disp(a, w) + (w2 ? " / " + disp(a2, w2) : "");
+const artList = lang => { const l = String(lang).toLowerCase(); for(const k in ARTS) if(l.includes(k)) return ARTS[k]; return []; };
+const artHint = lang => { const a = artList(lang); return a.length ? a.slice(0,3).join("/") : "Artikel"; };
+
+const splitArt = (t, lang, on) => {
+      t = t.trim(); if(!on) return ["", t];
+      for(const a of artList(lang).slice().sort((x,y) => y.length - x.length)){
+        if(/['’]$/.test(a)){ if(t.toLowerCase().startsWith(a) && t.length > a.length) return [t.slice(0, a.length), t.slice(a.length).trim()]; }
+        else { const m = t.match(new RegExp("^(" + a + ")\\s+(.+)$", "i")); if(m) return [m[1], m[2]]; }
+      }
+      return ["", t];
+    }
+
+/* ---------- Speichern ---------- */
+function fixDeck(d){
+  d.settings = { ...DEF, ...(legacy.typo ? { typo:true } : {}), ...(d.settings||{}) };
+  d.subs = Array.isArray(d.subs) ? d.subs : [];
+  d.subs.forEach(s => { s.settings = s.settings || {}; s.own = !!s.own; });
+  d.schemas = Array.isArray(d.schemas) ? d.schemas : [];
+  d.conj = (Array.isArray(d.conj) ? d.conj : []).map(t => ({ ...t, sub:t.sub||"", meaning:t.meaning||"", tense:t.tense||"", rows:Array.isArray(t.rows)?t.rows:[] }));
+  d.cards = (d.cards||[]).map(c => ({ ...c, aa:c.aa||"", ba:c.ba||"", aa2:c.aa2||"", a2:c.a2||"", ba2:c.ba2||"", b2:c.b2||"", sub:c.sub||"", av:Array.isArray(c.av)?c.av:[], bv:Array.isArray(c.bv)?c.bv:[] }));
+  return d;
+}
+function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(decks)); }catch(e){} }
+function loadLocal(){ try{ const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r).map(fixDeck) : []; }catch(e){ return []; } }
+function setStatus(t){ const el = document.getElementById("status"); if(el) el.textContent = t; }
+const baseStatus = () => sbState === "live" ? "Live synchronisiert über Supabase" : db ? "In deinem Konto gespeichert" : "Gespeichert in diesem Browser";
+function cloudRef(id){ return db.collection("data/users/" + uid).doc(id); }
+function persist(deck){
+  deck.updated = now();
+  saveLocal();
+  sbQueue(deck);
+  if(!db || !uid) return;
+  clearTimeout(saveTimers[deck.id]);
+  saveTimers[deck.id] = setTimeout(async () => {
+    try{ await cloudRef(deck.id).set(JSON.parse(JSON.stringify(deck))); setStatus("In deinem Konto gespeichert"); }
+    catch(e){ setStatus("Nur lokal gespeichert – Cloud-Speichern fehlgeschlagen"); }
+  }, 600);
+}
+async function removeDeck(id){
+  decks = decks.filter(d => d.id !== id); saveLocal();
+  sbRemove(id);
+  if(db && uid){ try{ await cloudRef(id).delete(); }catch(e){} }
+}
+async function initCloud(){
+  try{
+    claude.use("downloads").then(d => { downloads = d; }).catch(() => {});
+    db = await claude.use("db");
+    const user = await claude.use("user");
+    if(!db || !user){ db = null; return; }
+    uid = await user.id();
+    if(!uid){ db = null; return; }
+    const snap = await db.collection("data/users/" + uid).get();
+    const byId = new Map(snap.docs.map(d => d.data()).filter(Boolean).map(d => [d.id, fixDeck(JSON.parse(JSON.stringify(d)))]));
+    for(const l of decks){
+      const r = byId.get(l.id);
+      if(!r || (l.updated||0) > (r.updated||0)){ byId.set(l.id, l); try{ await cloudRef(l.id).set(JSON.parse(JSON.stringify(l))); }catch(e){} }
+    }
+    decks = [...byId.values()].sort((a,b) => (a.created||0) - (b.created||0));
+    saveLocal(); if(view.name !== "study") render();
+  }catch(e){ db = null; }
+}
+
+/* ---------- Sicherung ---------- */
+async function saveFile(filename, data, type){
+  if(downloads){
+    try{ await downloads.save({ filename, data }); return true; }catch(e){ return false; }
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([data], { type }));
+  a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  return true;
+}
+function stripProgress(d){
+  const c = JSON.parse(JSON.stringify(d));
+  [...c.cards, ...c.conj].forEach(x => { x.box = 0; x.due = 0; x.right = 0; x.wrong = 0; });
+  return c;
+}
+function buildHtml(list, withSb){
+  const css = document.getElementById("app-style").textContent;
+  const js = document.getElementById("app-script").textContent;
+  const exportId = uidGen(); markSeen(exportId);
+  const payload = JSON.stringify({ app:"karteikasten", version:5, exportId, exported:now(), decks:list, sb: withSb && sbCfg ? { url:sbCfg.url, key:sbCfg.key } : null }).replace(/</g, "\\u003c");
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Karteikasten – Vokabeltrainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style id="app-style">${css}<\/style>
+<\/head>
+<body>
+<div class="wrap" id="app"></div>
+<script type="application/json" id="embedded-decks">${payload}<\/script>
+<script id="app-script">${js}<\/script>
+<\/body>
+<\/html>
+`;
+}
+async function exportHtml(){
+  const ids = [...app.querySelectorAll("[data-exp]")].filter(c => c.checked).map(c => c.dataset.exp);
+  const withProg = document.getElementById("expProg").checked;
+  const list = decks.filter(d => ids.includes(d.id)).map(d => withProg ? JSON.parse(JSON.stringify(d)) : stripProgress(d));
+  const name = (list.length === 1 ? list[0].name : "Karteikasten").replace(/[\\/:*?"<>|]+/g, "").trim() || "Karteikasten";
+  const ok = await saveFile(name + ".html", buildHtml(list, document.getElementById("expSb")?.checked), "text/html");
+  setStatus(ok ? `„${name}.html“ gespeichert – mit ${list.length} Kapitel${list.length === 1 ? "" : "n"}` : "Speichern fehlgeschlagen");
+}
+// ---------- Importieren ohne Überschreiben ----------
+const SEEN_KEY = "karteikasten-seen-v1";
+function seenSet(){ try{ return new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || "[]")); }catch(e){ return new Set(); } }
+function markSeen(id){ if(!id) return; const s = seenSet(); s.add(id); try{ localStorage.setItem(SEEN_KEY, JSON.stringify([...s].slice(-200))); }catch(e){} }
+const same = (x, y) => String(x||"").trim().toLowerCase() === String(y||"").trim().toLowerCase();
+const cardText = c => [c.aa, c.a, c.aa2, c.a2, ...(c.av||[]), c.ba, c.b, c.ba2, c.b2, ...(c.bv||[])].map(x => String(x||"").trim()).join("\u0001");
+const conjText = t => [t.word, t.meaning, t.tense, ...t.rows.map(r => r.p + "=" + r.f)].join("\u0001");
+
+function planMerge(list){
+  const plan = { newDecks:[], subs:[], schemas:[], adds:[], conflicts:[], same:0 };
+  list.forEach(raw => {
+    const inc = fixDeck(JSON.parse(JSON.stringify(raw))); if(!inc.name) return;
+    const ex = (inc.id && deckOf(inc.id)) || decks.find(d => same(d.name, inc.name));
+    if(!ex){ if(!inc.id || deckOf(inc.id)) inc.id = uidGen(); plan.newDecks.push(inc); return; }
+    // Unterkapitel nach Namen zuordnen
+    const subMap = {};
+    inc.subs.forEach(s => {
+      const m = ex.subs.find(x => x.id === s.id || same(x.name, s.name)) || plan.subs.find(x => x.deck === ex && same(x.sub.name, s.name))?.sub;
+      if(m) subMap[s.id] = m.id;
+      else { const ns = { ...s, id: ex.subs.some(x => x.id === s.id) ? uidGen() : s.id }; plan.subs.push({ deck:ex, sub:ns }); subMap[s.id] = ns.id; }
+    });
+    inc.schemas.forEach(sc => { if(!ex.schemas.some(x => same(x.name, sc.name))) plan.schemas.push({ deck:ex, schema:sc }); });
+    const mapSub = id => (id && subMap[id]) || "";
+    const usedIds = new Set(ex.cards.map(x => x.id));
+    inc.cards.forEach(c => {
+      const local = ex.cards.find(x => x.id === c.id) || ex.cards.find(x => same(x.a, c.a) && same(x.aa, c.aa)) || ex.cards.find(x => same(x.a, c.a));
+      if(!local){ plan.adds.push({ deck:ex, kind:"card", item:{ ...c, id: usedIds.has(c.id) ? uidGen() : c.id, sub:mapSub(c.sub) } }); }
+      else if(cardText(local) === cardText(c)) plan.same++;
+      else plan.conflicts.push({ deck:ex, kind:"card", local, inc:c, choice:"keep" });
+    });
+    const usedT = new Set(ex.conj.map(x => x.id));
+    inc.conj.forEach(t => {
+      const local = ex.conj.find(x => x.id === t.id) || ex.conj.find(x => same(x.word, t.word) && same(x.tense, t.tense));
+      if(!local){ plan.adds.push({ deck:ex, kind:"conj", item:{ ...t, id: usedT.has(t.id) ? uidGen() : t.id, sub:mapSub(t.sub) } }); }
+      else if(conjText(local) === conjText(t)) plan.same++;
+      else plan.conflicts.push({ deck:ex, kind:"conj", local, inc:t, choice:"keep" });
+    });
+  });
+  return plan;
+}
+function applyPlan(plan){
+  const touched = new Set();
+  plan.newDecks.forEach(d => { decks.push(d); touched.add(d); });
+  plan.subs.forEach(({deck, sub}) => { deck.subs.push(sub); touched.add(deck); });
+  plan.schemas.forEach(({deck, schema}) => { deck.schemas.push({ ...schema, id:uidGen() }); touched.add(deck); });
+  plan.adds.forEach(({deck, kind, item}) => { (kind === "card" ? deck.cards : deck.conj).push(item); touched.add(deck); });
+  let over = 0;
+  plan.conflicts.forEach(cf => {
+    if(cf.choice !== "replace") return;
+    if(cf.kind === "card") Object.assign(cf.local, { aa:cf.inc.aa, a:cf.inc.a, av:cf.inc.av, ba:cf.inc.ba, b:cf.inc.b, bv:cf.inc.bv, aa2:cf.inc.aa2||"", a2:cf.inc.a2||"", ba2:cf.inc.ba2||"", b2:cf.inc.b2||"" });
+    else Object.assign(cf.local, { word:cf.inc.word, meaning:cf.inc.meaning, tense:cf.inc.tense, rows:cf.inc.rows });
+    over++; touched.add(cf.deck);
+  });
+  touched.forEach(persist);
+  const nw = plan.adds.length + plan.newDecks.reduce((n,d) => n + d.cards.length + d.conj.length, 0);
+  return `Import fertig: ${plan.newDecks.length} neue Kapitel, ${nw} neue Vokabeln/Tabellen` + (over ? `, ${over} überschrieben` : "") + (plan.same ? `, ${plan.same} waren schon gleich da` : "");
+}
+function runImport(list, sourceName){
+  const plan = planMerge(list);
+  if(!plan.conflicts.length){ view = { name:"home", msg:applyPlan(plan) }; return render(); }
+  view = { name:"import", plan, source:sourceName };
+  render();
+}
+function renderImport(){
+  const P = view.plan;
+  const nw = P.adds.length + P.newDecks.reduce((n,d) => n + d.cards.length + d.conj.length, 0);
+  const show = (cf, x) => cf.kind === "card"
+    ? `<span class="t">${esc(pdisp(x.aa, x.a, x.aa2, x.a2))}</span> → <span class="t">${esc(pdisp(x.ba, x.b, x.ba2, x.b2))}</span>${(x.av||[]).length || (x.bv||[]).length ? `<span class="alt">auch: ${esc([...(x.av||[]), ...(x.bv||[])].join(", "))}</span>` : ""}`
+    : `<span class="t">${esc(x.word)}</span> <span class="small">${esc(x.tense)}</span><table class="ctable">${x.rows.map(r => `<tr><td>${esc(r.p)}</td><td>${esc(r.f)}</td></tr>`).join("")}</table>`;
+  app.innerHTML = `
+    <h2>Vokabeln importieren</h2>
+    <p class="sub">${esc(view.source || "Datei")} · ${P.newDecks.length} neue Kapitel · ${nw} neue Vokabeln/Tabellen · ${P.same} schon gleich vorhanden</p>
+    <div class="status" id="status"></div>
+    <div class="panel">
+      <h2 style="font-size:1.15rem">${P.conflicts.length} Wörter gibt es bei dir schon – anders geschrieben</h2>
+      <p class="small" style="margin:4px 0 12px">Neue Wörter kommen auf jeden Fall dazu. Hier entscheidest du nur, was mit den doppelten passiert. Dein Lernstand bleibt in beiden Fällen.</p>
+      <div class="row" style="margin-bottom:12px"><button class="ghost" id="allKeep">Alle behalten</button><button class="ghost" id="allRep">Alle überschreiben</button></div>
+      ${P.conflicts.map((cf,i) => `<div class="conf"><span class="chap">${esc(cf.deck.name)}</span>
+        <div class="opts">
+          <label><input type="radio" name="cf${i}" value="keep" data-cf="${i}" ${cf.choice==="keep"?"checked":""}>Meins behalten<br>${show(cf, cf.local)}</label>
+          <label><input type="radio" name="cf${i}" value="replace" data-cf="${i}" ${cf.choice==="replace"?"checked":""}>Überschreiben mit<br>${show(cf, cf.inc)}</label>
+        </div></div>`).join("")}
+      <div class="row" style="margin-top:12px"><button id="doImp">Import abschließen</button><button class="ghost" id="cancelImp">Abbrechen</button></div>
+    </div>`;
+  app.querySelectorAll("[data-cf]").forEach(r => r.onchange = () => { P.conflicts[+r.dataset.cf].choice = r.value; });
+  document.getElementById("allKeep").onclick = () => { P.conflicts.forEach(c => c.choice = "keep"); render(); };
+  document.getElementById("allRep").onclick = () => { P.conflicts.forEach(c => c.choice = "replace"); render(); };
+  document.getElementById("doImp").onclick = () => { view = { name:"home", msg:applyPlan(P) }; render(); };
+  document.getElementById("cancelImp").onclick = () => { view = { name:"home", msg:"Import abgebrochen – nichts geändert" }; render(); };
+}
+function loadEmbedded(){
+  try{
+    const el = document.getElementById("embedded-decks");
+    const j = el && JSON.parse(el.textContent);
+    if(!j || !Array.isArray(j.decks) || !j.decks.length) return;
+    if(j.exportId && seenSet().has(j.exportId)) return;
+    markSeen(j.exportId);
+    if(!decks.length){ decks = j.decks.map(x => fixDeck(JSON.parse(JSON.stringify(x)))); saveLocal(); view.msg = `${decks.length} Kapitel aus dieser Datei geladen`; return; }
+    const plan = planMerge(j.decks);
+    if(!plan.conflicts.length){ if(plan.newDecks.length || plan.adds.length || plan.subs.length) view.msg = applyPlan(plan); return; }
+    view = { name:"import", plan, source:"Diese Datei" };
+  }catch(e){}
+}
+async function exportBackup(){
+  const data = JSON.stringify({ app:"karteikasten", version:3, exported:new Date().toISOString(), decks }, null, 1);
+  const filename = "karteikasten-sicherung-" + new Date().toISOString().slice(0,10) + ".json";
+  if(downloads){
+    try{ await downloads.save({ filename, data }); setStatus("Sicherung gespeichert"); }catch(e){ setStatus("Sicherung nicht gespeichert"); }
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([data], { type:"application/json" }));
+  a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setStatus("Sicherung heruntergeladen");
+}
+function importBackup(file){
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const text = String(r.result); let j;
+      if(/^\s*</.test(text)){
+        const m = text.match(/<script type="application\/json" id="embedded-decks">([\s\S]*?)<\/script>/);
+        j = m ? JSON.parse(m[1]) : null;
+        if(!j || !Array.isArray(j.decks)) return setStatus("In dieser HTML-Datei sind keine Vokabeln gespeichert");
+      } else j = JSON.parse(text);
+      const list = Array.isArray(j) ? j : j.decks;
+      if(!Array.isArray(list)) throw 0;
+      runImport(list, file.name);
+    }catch(e){ setStatus("Diese Datei ist keine Karteikasten-Datei"); }
+  };
+  r.readAsText(file);
+}
+
+/* ---------- Supabase Live-Sync ---------- */
+const SB_KEY = "karteikasten-sb-v1", SB_SYNC = "karteikasten-sbsynced-v1", SB_DEL = "karteikasten-sbdel-v1";
+const SB_LIB = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js";
+const readJSON = (k, def) => { try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }catch(e){ return def; } };
+const writeJSON = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
+let sbCfg = readJSON(SB_KEY, null);
+let sb = null, sbUser = null, sbState = "off", sbErr = "", sbMsg = "", sbChans = [], sbTimers = {};
+let sbSynced = {}, sbDeleted = readJSON(SB_DEL, []);
+const inClaude = () => !!(window.claude && typeof window.claude.use === "function");
+const syncKey = () => SB_SYNC + ":" + (sbUser ? sbUser.id : "");
+const saveSynced = () => writeJSON(syncKey(), sbSynced);
+function loadScript(src){
+  return new Promise((res, rej) => {
+    if(window.supabase && window.supabase.createClient) return res();
+    const el = document.createElement("script"); el.src = src; el.onload = res; el.onerror = () => rej(new Error("Bibliothek nicht geladen"));
+    document.head.appendChild(el);
+  });
+}
+function sbErrMsg(e){
+  const m = String((e && (e.message || e.error_description)) || e || "");
+  if(/relation|does not exist|schema cache|decks/i.test(m)) return "Die Tabelle „decks“ fehlt – hast du den SQL-Code im SQL Editor ausgeführt?";
+  if(/fetch|network|Failed|Load failed|Bibliothek/i.test(m)) return "Keine Verbindung zu Supabase. Bist du online und stimmt die Project URL? Änderungen werden später hochgeladen.";
+  if(/JWT|apikey|Invalid API key/i.test(m)) return "Der anon key stimmt nicht – kopiere ihn nochmal aus Project Settings → API.";
+  return m || "Unbekannter Fehler";
+}
+async function sbInit(){
+  if(!sbCfg || inClaude()) return;
+  sbState = "connecting"; sbRefresh();
+  try{
+    await loadScript(SB_LIB);
+    sb = window.supabase.createClient(sbCfg.url, sbCfg.key, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, flowType:"implicit" } });
+    sb.auth.onAuthStateChange((ev, session) => {
+      const u = session && session.user || null;
+      if(u && (!sbUser || sbUser.id !== u.id)){ sbUser = u; sbSynced = readJSON(syncKey(), {}); setTimeout(sbStart, 0); }
+      else if(!u){ sbUser = null; sbStop(); }
+    });
+    const { data, error } = await sb.auth.getSession();
+    if(error) throw error;
+    if(!data.session && !sbUser) await sbAnon();
+    if(/access_token|error_description/.test(location.hash)){
+      if(/error_description/.test(location.hash)){ sbMsg = "Der Login-Link ist abgelaufen oder ungültig – fordere einen neuen an."; }
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+  }catch(e){ sbState = "error"; sbErr = sbErrMsg(e); sbRefresh(); }
+}
+async function sbAnon(){
+  const { error } = await sb.auth.signInAnonymously();
+  if(error){ sbState = "error"; sbErr = /anonymous|disabled|not enabled/i.test(error.message || "")
+    ? "In Supabase ist „Anonymous Sign-Ins“ noch aus: Authentication → Sign In / Providers → „Allow anonymous sign-ins“ einschalten, dann hier „Erneut versuchen“."
+    : sbErrMsg(error); sbRefresh(); }
+}
+let sbBusy = false;
+async function sbStart(){
+  if(!sb || !sbUser || sbBusy) return;
+  sbBusy = true; sbState = "syncing"; sbErr = ""; sbRefresh();
+  try{ await sbFullSync(); sbSubscribe(); sbState = "live"; clsLoad(); }
+  catch(e){ sbState = "error"; sbErr = sbErrMsg(e); }
+  sbBusy = false; sbRefresh();
+}
+function sbStop(){
+  sbChans.forEach(c => { try{ sb.removeChannel(c); }catch(e){} }); sbChans = [];
+  clsList = []; clsState = "idle"; clsTeacher = false; if(clsChan){ try{ sb.removeChannel(clsChan); }catch(e){} clsChan = null; }
+  if(view.name === "class"){ view = { name:"home" }; render(); }
+  sbState = sbCfg ? "loggedout" : "off"; sbRefresh();
+}
+const sbRow = d => ({ user_id:sbUser.id, id:d.id, data:JSON.parse(JSON.stringify(d)), updated_at:new Date(d.updated || now()).toISOString() });
+async function sbFullSync(){
+  if(sbDeleted.length){
+    const { error } = await sb.from("decks").delete().in("id", sbDeleted); if(error) throw error;
+    sbDeleted = []; writeJSON(SB_DEL, sbDeleted);
+  }
+  const { data, error } = await sb.from("decks").select("id,data"); if(error) throw error;
+  const remote = new Map(data.map(r => [r.id, r.data]));
+  let changed = false;
+  remote.forEach((rd, id) => {
+    const l = deckOf(id);
+    if(!l){ decks.push(fixDeck(JSON.parse(JSON.stringify(rd)))); changed = true; }
+    else if((rd.updated||0) > (l.updated||0)){ Object.assign(l, fixDeck(JSON.parse(JSON.stringify(rd)))); changed = true; }
+  });
+  // auf einem anderen Gerät gelöscht?
+  decks.slice().forEach(l => {
+    if(!remote.has(l.id) && sbSynced[l.id] && (l.updated||0) <= sbSynced[l.id]){ decks = decks.filter(x => x !== l); delete sbSynced[l.id]; changed = true; }
+  });
+  const up = decks.filter(l => !remote.has(l.id) || (l.updated||0) > (remote.get(l.id).updated||0));
+  if(up.length){ const { error:e2 } = await sb.from("decks").upsert(up.map(sbRow), { onConflict:"user_id,id" }); if(e2) throw e2; }
+  decks.forEach(l => sbSynced[l.id] = l.updated || 0); saveSynced();
+  if(changed){ saveLocal(); liveRender(); }
+}
+function sbApplyRemote(rd){
+  if(!rd || !rd.id) return;
+  const l = deckOf(rd.id);
+  if(!l) decks.push(fixDeck(JSON.parse(JSON.stringify(rd))));
+  else if((rd.updated||0) > (l.updated||0)) Object.assign(l, fixDeck(JSON.parse(JSON.stringify(rd))));
+  else return;
+  sbSynced[rd.id] = rd.updated || 0; saveSynced(); saveLocal(); liveRender();
+}
+function sbSubscribe(){
+  sbChans.forEach(c => { try{ sb.removeChannel(c); }catch(e){} }); sbChans = [];
+  const ch = sb.channel("decks-" + sbUser.id)
+    .on("postgres_changes", { event:"INSERT", schema:"public", table:"decks", filter:"user_id=eq." + sbUser.id }, p => sbApplyRemote(p.new && p.new.data))
+    .on("postgres_changes", { event:"UPDATE", schema:"public", table:"decks", filter:"user_id=eq." + sbUser.id }, p => sbApplyRemote(p.new && p.new.data))
+    .on("postgres_changes", { event:"DELETE", schema:"public", table:"decks" }, p => {
+      const o = p.old || {}; if(o.user_id && o.user_id !== sbUser.id) return;
+      if(o.id && deckOf(o.id)){ decks = decks.filter(d => d.id !== o.id); delete sbSynced[o.id]; saveSynced(); saveLocal(); liveRender(); }
+    })
+    .subscribe(status => {
+      if(status === "SUBSCRIBED"){ if(sbState !== "syncing"){ sbState = "live"; sbRefresh(); } }
+      else if(status === "CHANNEL_ERROR" || status === "TIMED_OUT"){ sbState = "error"; sbErr = "Die Live-Verbindung ist unterbrochen. Gespeichert wird trotzdem – klick auf „Jetzt synchronisieren“."; sbRefresh(); }
+    });
+  sbChans.push(ch);
+}
+function sbQueue(deck){
+  if(!sb || !sbUser) return;
+  clearTimeout(sbTimers[deck.id]);
+  sbTimers[deck.id] = setTimeout(async () => {
+    const { error } = await sb.from("decks").upsert([sbRow(deck)], { onConflict:"user_id,id" });
+    if(error){ sbState = "error"; sbErr = sbErrMsg(error); sbRefresh(); }
+    else { sbSynced[deck.id] = deck.updated || 0; saveSynced(); if(sbState === "error"){ sbState = "live"; sbRefresh(); } }
+  }, 700);
+}
+async function sbRemove(id){
+  if(!sbCfg) return;
+  delete sbSynced[id]; if(sbUser) saveSynced();
+  if(sb && sbUser){ const { error } = await sb.from("decks").delete().eq("id", id); if(!error) return; }
+  sbDeleted.push(id); writeJSON(SB_DEL, sbDeleted);
+}
+function liveRender(){
+  if(view.name === "study" || view.name === "import") return;
+  const a = document.activeElement;
+  if(a && app.contains(a) && a.matches("input:not([type=checkbox]):not([type=radio]), textarea")){
+    if(!liveRender.wait){ liveRender.wait = true;
+      a.addEventListener("blur", () => setTimeout(() => { liveRender.wait = false; liveRender(); }, 60), { once:true }); }
+    return;
+  }
+  render();
+}
+function sbPanelHtml(){
+  if(inClaude()) return `<div class="panel" id="sbPanel"><h2 style="font-size:1.15rem">Live-Sync mit Supabase</h2>
+    <p class="small" style="margin:4px 0 0">Funktioniert in deiner eigenen Version der App (z. B. auf GitHub Pages). Hier im Claude-Link wird stattdessen in deinem Claude-Konto gespeichert.</p></div>`;
+  const dot = { live:"live", error:"err", syncing:"busy", connecting:"busy" }[sbState] || "";
+  let body = "";
+  if(!sbCfg) body = `
+    <p class="small" style="margin:4px 0 12px">Trag die Daten aus Supabase ein (<b>Project Settings → API</b>). Nur den <b>anon public</b> key nehmen – niemals den service_role key.</p>
+    <div class="row"><div><label for="sbUrl">Project URL</label><input id="sbUrl" placeholder="https://xxxx.supabase.co" autocomplete="off" spellcheck="false"></div>
+      <div><label for="sbKey">anon public key</label><input id="sbKey" placeholder="eyJhbGciOi…" autocomplete="off" spellcheck="false"></div>
+      <button id="sbSave">Verbinden</button></div>`;
+  else if(sbState === "connecting" || sbState === "off") body = `<p style="margin:6px 0"><span class="sbdot busy"></span>Verbinde mit Supabase …</p>`;
+  else if(sbState === "loggedout") body = `
+    <p class="small" style="margin:4px 0 12px">Melde dich mit deiner E-Mail an. Du bekommst einen Link – draufklicken, fertig. Auf jedem Gerät mit derselben E-Mail anmelden, dann sind die Vokabeln überall gleich.</p>
+    ${location.protocol === "file:" ? `<p class="small" style="margin:0 0 10px;color:var(--bad)">Achtung: Die App läuft gerade als Datei auf deinem PC. Der Login-Link funktioniert nur, wenn die App auf einer Webseite läuft (z. B. GitHub Pages).</p>` : ""}
+    <div class="row"><div><label for="sbMail">E-Mail</label><input id="sbMail" type="email" autocomplete="email" placeholder="du@beispiel.de"></div><button id="sbSend">Login-Link schicken</button></div>`;
+  else if(sbState === "error") body = `<p style="margin:6px 0"><span class="sbdot err"></span>${esc(sbErr)}</p>
+    <div class="row" style="margin-top:8px"><button id="sbRetry">Erneut versuchen</button>${sbUser ? `<button class="ghost" id="sbOut">Abmelden</button>` : ""}</div>`;
+  else if(sbUser && sbUser.is_anonymous) body = `<p style="margin:6px 0"><span class="sbdot ${dot}"></span>${sbState === "syncing" ? "Synchronisiere …" : "Online gespeichert"} · ohne Anmeldung</p>
+    <p class="small" style="margin:0 0 10px">Deine Vokabeln werden online gesichert – ohne E-Mail, für dieses Gerät. Ohne Internet wird lokal gespeichert und später abgeglichen.</p>
+    <div class="row"><button class="ghost" id="sbNow">Jetzt synchronisieren</button></div>
+    <details style="margin-top:12px"><summary class="small" style="cursor:pointer">Optional: auf mehreren Geräten gleich haben (mit E-Mail)</summary>
+      <div class="row" style="margin-top:8px"><div><label for="sbMail">E-Mail</label><input id="sbMail" type="email" autocomplete="email" placeholder="du@beispiel.de"></div></div>
+      <div class="row" style="margin-top:8px"><button class="ghost" id="sbLink">Dieses Gerät mit E-Mail verbinden</button><button class="ghost" id="sbSend">Auf diesem Gerät mit E-Mail anmelden</button></div>
+      <p class="small" style="margin:8px 0 0">„Verbinden“ auf dem ersten Gerät, „Anmelden“ auf den weiteren Geräten.</p>
+    </details>`;
+  else body = `<p style="margin:6px 0"><span class="sbdot ${dot}"></span>${sbState === "syncing" ? "Synchronisiere …" : "Live-Sync aktiv"}${sbUser ? ` · angemeldet als <b>${esc(sbUser.email || "")}</b>` : ""}</p>
+    <p class="small" style="margin:0 0 10px">Jede Änderung wird sofort hochgeladen und erscheint auf deinen anderen Geräten. Ohne Internet wird lokal gespeichert und später abgeglichen.</p>
+    <div class="row"><button class="ghost" id="sbNow">Jetzt synchronisieren</button><button class="ghost" id="sbOut">Abmelden</button></div>`;
+  return `<div class="panel" id="sbPanel"><h2 style="font-size:1.15rem">Live-Sync mit Supabase</h2>
+    ${body}
+    ${sbMsg ? `<p class="small" style="margin:10px 0 0;font-weight:600">${esc(sbMsg)}</p>` : ""}
+    ${sbCfg ? `<p style="margin:12px 0 0"><button class="linkbtn" id="sbForget">Supabase-Verbindung entfernen</button></p>` : ""}</div>`;
+}
+function sbRefresh(){
+  if(view.name !== "home"){ return; }
+  const el = document.getElementById("sbPanel");
+  if(el){ el.outerHTML = sbPanelHtml(); wireSb(); setStatus(baseStatus()); }
+  clsRefresh();
+}
+function wireSb(){
+  const $ = id => document.getElementById(id);
+  if($("sbSave")) $("sbSave").onclick = () => {
+    let url = $("sbUrl").value.trim().replace(/\/+$/, ""), key = $("sbKey").value.trim();
+    if(!/^https:\/\/.+/.test(url)){ sbMsg = "Die Project URL beginnt mit https:// – z. B. https://abcd.supabase.co"; return sbRefresh(); }
+    if(key.length < 30){ sbMsg = "Der anon key ist sehr lang (beginnt meist mit „eyJ“). Kopiere ihn komplett."; return sbRefresh(); }
+    sbCfg = { url, key }; writeJSON(SB_KEY, sbCfg); sbMsg = ""; sbInit();
+  };
+  if($("sbSend")) $("sbSend").onclick = async () => {
+    const email = $("sbMail").value.trim();
+    if(!/^\S+@\S+\.\S+$/.test(email)){ sbMsg = "Bitte eine gültige E-Mail eingeben."; return sbRefresh(); }
+    $("sbSend").disabled = true;
+    const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.origin + location.pathname } });
+    sbMsg = error ? "Konnte keinen Link schicken: " + (error.message || error) : `Link an ${email} geschickt – schau in dein Postfach (auch im Spam-Ordner) und öffne ihn in diesem Browser.`;
+    sbRefresh();
+  };
+  if($("sbRetry")) $("sbRetry").onclick = () => { sbMsg = ""; sb ? (sbUser ? sbStart() : sbInit()) : sbInit(); };
+  if($("sbNow")) $("sbNow").onclick = () => { sbMsg = ""; sbStart(); };
+  if($("sbOut")) $("sbOut").onclick = async () => { sbMsg = "Abgemeldet. Deine Vokabeln bleiben in diesem Browser gespeichert."; try{ await sb.auth.signOut(); }catch(e){} sbUser = null; sbStop(); await sbAnon(); };
+  if($("sbLink")) $("sbLink").onclick = async () => {
+    const email = $("sbMail").value.trim();
+    if(!/^\S+@\S+\.\S+$/.test(email)){ sbMsg = "Bitte eine gültige E-Mail eingeben."; return sbRefresh(); }
+    const { error } = await sb.auth.updateUser({ email }, { emailRedirectTo: location.origin + location.pathname });
+    sbMsg = error ? "Hat nicht geklappt: " + (error.message || error) : `Bestätigungs-Link an ${email} geschickt. Danach kannst du dich auf anderen Geräten mit dieser E-Mail anmelden.`;
+    sbRefresh();
+  };
+  if($("sbForget")) $("sbForget").onclick = async () => {
+    try{ if(sb) await sb.auth.signOut(); }catch(e){}
+    sbChans = []; sb = null; sbUser = null; sbCfg = null; sbState = "off"; sbMsg = "Verbindung entfernt. Deine Vokabeln bleiben in diesem Browser.";
+    try{ localStorage.removeItem(SB_KEY); }catch(e){} sbRefresh();
+  };
+}
+window.addEventListener("online", () => { if(sbUser) sbStart(); });
+
+/* ---------- Lehrer-Modus & Sitzungen (ohne Login) ---------- */
+let clsList = [], clsState = "idle", clsMsg = "", clsChan = null, clsMembers = null, clsTeacher = false, clsUnlock = false;
+const NAME_KEY = "karteikasten-classname-v1", TNAME_KEY = "karteikasten-teachername-v1";
+let pendingJoin = "";
+try{ const q = new URLSearchParams(location.search).get("join");
+  pendingJoin = q ? q.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) : (localStorage.getItem("karteikasten-join-v1") || "");
+  if(q){ localStorage.setItem("karteikasten-join-v1", pendingJoin); history.replaceState(null, "", location.pathname + location.hash); } }catch(e){}
+const fmtCode = c => String(c||"").replace(/^(...)(...)$/, "$1-$2");
+const clsOf = id => clsList.find(c => c.id === id);
+function clsErr(e){
+  const m = String((e && e.message) || e || "");
+  if(/code_not_found/.test(m)) return "Diesen Code gibt es nicht. Tippfehler? Achte auf Buchstaben und Zahlen.";
+  if(/session_closed/.test(m)) return "Diese Sitzung nimmt gerade niemanden mehr auf. Frag deine Lehrkraft.";
+  if(/session_ended/.test(m)) return "Diese Sitzung ist schon beendet.";
+  if(/not_teacher/.test(m)) return "Das geht nur im Lehrer-Modus.";
+  if(/too_many/.test(m)) return "Zu viele falsche Versuche. Warte 10 Minuten und versuch es dann nochmal.";
+  if(/wrong_pw/.test(m)) return "Das alte Passwort stimmt nicht.";
+  if(/pw_short/.test(m)) return "Das neue Passwort muss mindestens 4 Zeichen haben.";
+  if(/not_logged_in/.test(m)) return "Keine Verbindung zu Supabase – oben im Live-Sync prüfen.";
+  if(/function|does not exist|schema cache|relation/i.test(m)) return "Die Tabellen für Sitzungen fehlen in Supabase – führ den SQL-Code für Sitzungen im SQL Editor aus.";
+  if(/check constraint|violates/i.test(m)) return "Name zu lang oder leer (Sitzung max. 80, Name max. 40 Zeichen).";
+  return m || "Unbekannter Fehler";
+}
+async function clsLoad(){
+  if(!sb || !sbUser) return;
+  clsState = "loading"; clsRefresh();
+  const [t, own, part] = await Promise.all([
+    sb.from("teachers").select("user_id").eq("user_id", sbUser.id),
+    sb.from("sessions").select("*").eq("owner", sbUser.id),
+    sb.from("participants").select("display_name, session_id, sessions(*)").eq("user_id", sbUser.id)
+  ]);
+  const err = t.error || own.error || part.error;
+  if(err){ clsState = "error"; clsMsg = clsErr(err); clsRefresh(); return; }
+  clsTeacher = t.data.length > 0;
+  const list = own.data.map(x => ({ ...x, role:"teacher", me:x.teacher_name || "" }));
+  part.data.filter(r => r.sessions && !list.some(x => x.id === r.session_id)).forEach(r => list.push({ ...r.sessions, role:"student", me:r.display_name }));
+  clsList = list.sort((a,b) => (b.active - a.active) || (a.role === b.role ? 0 : a.role === "teacher" ? -1 : 1) || String(b.created_at).localeCompare(String(a.created_at)));
+  clsState = "ok";
+  if(view.name === "class" && !clsOf(view.id)){ view = { name:"home", msg:"Du bist nicht mehr in dieser Sitzung." }; render(); return; }
+  clsRefresh();
+}
+function clsPanelHtml(){
+  if(inClaude()) return "";
+  if(!sbCfg) return pendingJoin ? `<div class="panel" id="clsPanel"><h2 style="font-size:1.15rem">Sitzungen</h2><p class="small" style="margin:4px 0 0">Du wurdest in eine Sitzung eingeladen (Code <b>${esc(fmtCode(pendingJoin))}</b>). Dafür muss oben zuerst die Supabase-Verbindung eingetragen sein – frag die Person, die dich eingeladen hat.</p></div>` : "";
+  let body;
+  if(!sbUser) body = `<p class="small" style="margin:4px 0 0">Verbinde …</p>`;
+  else {
+    const joined = clsList.filter(c => c.role === "student"), mine = clsList.filter(c => c.role === "teacher");
+    const card = c => `<button class="cls" data-cls="${c.id}"><span class="nm">${esc(c.name)}</span>
+      <span class="small">${c.role === "teacher" ? (c.active ? "Code " + esc(fmtCode(c.code)) : "beendet") : "Lehrkraft: " + esc(c.teacher_name || "–")}</span><br>
+      <span class="role ${c.active ? "t" : ""}">${c.active ? "läuft" : "beendet"}</span></button>`;
+    body = `
+      <div class="row" style="margin-bottom:10px">
+        <div><label for="clsName">Dein Name</label><input id="clsName" maxlength="40" value="${esc(readJSON(NAME_KEY, ""))}" placeholder="Vorname oder Spitzname"></div>
+        <div><label for="clsCode">Code von der Lehrkraft</label><input id="clsCode" maxlength="7" autocomplete="off" spellcheck="false" style="text-transform:uppercase;letter-spacing:.1em" placeholder="ABC-123" value="${esc(fmtCode(pendingJoin))}"></div>
+        <button id="clsJoin">Beitreten</button>
+      </div>
+      ${joined.length ? `<div class="clslist">${joined.map(card).join("")}</div>` : ""}
+      <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+      ${clsTeacher ? `
+        <p style="margin:0 0 10px"><span class="role t" style="margin:0 6px 0 0">Lehrer-Modus aktiv</span><span class="small">auf diesem Gerät</span></p>
+        <div class="row" style="margin-bottom:10px">
+          <div><label for="clsNew">Neue Sitzung</label><input id="clsNew" maxlength="80" placeholder="z. B. Französisch 7b – Vokabeltest"></div>
+          <div><label for="clsTName">Dein Name für die Schüler</label><input id="clsTName" maxlength="40" value="${esc(readJSON(TNAME_KEY, ""))}" placeholder="z. B. Frau Weber"></div>
+          <button id="clsCreate">Sitzung starten</button>
+        </div>
+        ${mine.length ? `<div class="clslist">${mine.map(card).join("")}</div>` : `<p class="small" style="margin:0 0 10px">Noch keine Sitzungen.</p>`}
+        <details style="margin-top:6px"><summary class="small" style="cursor:pointer">Lehrer-Passwort ändern</summary>
+          <div class="row" style="margin-top:8px">
+            <div><label for="pwOld">Altes Passwort</label><input id="pwOld" type="password" autocomplete="current-password"></div>
+            <div><label for="pwNew">Neues Passwort</label><input id="pwNew" type="password" autocomplete="new-password"></div>
+            <div><label for="pwNew2">Nochmal</label><input id="pwNew2" type="password" autocomplete="new-password"></div>
+            <button class="ghost" id="pwSave">Ändern</button>
+          </div>
+          <p class="small" style="margin:8px 0 0">Gilt sofort für alle Lehrkräfte. Wer den Lehrer-Modus schon freigeschaltet hat, bleibt Lehrkraft.</p>
+        </details>
+        <p style="margin:12px 0 0"><button class="linkbtn" id="tLock">Lehrer-Modus auf diesem Gerät beenden</button></p>`
+      : clsUnlock ? `
+        <div class="row">
+          <div><label for="tPw">Lehrer-Passwort</label><input id="tPw" type="password" autocomplete="off"></div>
+          <button id="tUnlock">Freischalten</button><button class="ghost" id="tCancel">Abbrechen</button>
+        </div>`
+      : `<p style="margin:0"><button class="linkbtn" id="tShow">Ich bin Lehrkraft</button></p>`}`;
+  }
+  return `<div class="panel" id="clsPanel"><h2 style="font-size:1.15rem">Sitzungen</h2>${body}
+    ${clsMsg ? `<p class="small" style="margin:10px 0 0;font-weight:600">${esc(clsMsg)}</p>` : ""}</div>`;
+}
+function clsRefresh(){
+  if(view.name === "class") return renderClass();
+  if(view.name !== "home") return;
+  const el = document.getElementById("clsPanel");
+  const html = clsPanelHtml();
+  if(el){ if(el.contains(document.activeElement) && clsState === "loading") return; el.outerHTML = html || ""; wireCls(); }
+  else if(html){ const sbp = document.getElementById("sbPanel"); if(sbp){ sbp.insertAdjacentHTML("afterend", html); wireCls(); } }
+}
+function wireCls(){
+  const $ = id => document.getElementById(id);
+  app.querySelectorAll("[data-cls]").forEach(b => b.onclick = () => openClass(b.dataset.cls));
+  const say = m => { clsMsg = m; clsRefresh(); };
+  if($("clsJoin")){
+    $("clsJoin").onclick = async () => {
+      const code = $("clsCode").value.toUpperCase().replace(/[^A-Z0-9]/g, ""), name = $("clsName").value.trim();
+      if(!name) return say("Trag zuerst deinen Namen ein.");
+      if(code.length !== 6) return say("Der Code hat 6 Zeichen, z. B. ABC-123.");
+      writeJSON(NAME_KEY, name); $("clsJoin").disabled = true;
+      const { data, error } = await sb.rpc("join_session", { p_code:code, p_name:name });
+      if(error) return say(clsErr(error));
+      pendingJoin = ""; try{ localStorage.removeItem("karteikasten-join-v1"); }catch(e){}
+      clsMsg = ""; await clsLoad(); openClass(data.id, `Willkommen in „${data.name}“!`);
+    };
+    $("clsCode").onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); $("clsJoin").click(); } };
+  }
+  if($("tShow")) $("tShow").onclick = () => { clsUnlock = true; clsMsg = ""; clsRefresh(); $("tPw")?.focus(); };
+  if($("tCancel")) $("tCancel").onclick = () => { clsUnlock = false; clsMsg = ""; clsRefresh(); };
+  if($("tUnlock")){
+    const go = async () => {
+      const pw = $("tPw").value; if(!pw) return $("tPw").focus();
+      $("tUnlock").disabled = true;
+      const { data, error } = await sb.rpc("teacher_unlock", { p_pw:pw });
+      if(error) return say(clsErr(error));
+      if(!data) return say("Falsches Passwort.");
+      clsUnlock = false; clsMsg = "Lehrer-Modus freigeschaltet."; clsLoad();
+    };
+    $("tUnlock").onclick = go;
+    $("tPw").onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); go(); } };
+  }
+  if($("tLock")) $("tLock").onclick = async () => {
+    const { error } = await sb.from("teachers").delete().eq("user_id", sbUser.id);
+    if(error) return say(clsErr(error)); clsMsg = "Lehrer-Modus beendet. Deine Sitzungen bleiben erhalten."; clsLoad(); };
+  if($("pwSave")) $("pwSave").onclick = async () => {
+    const o = $("pwOld").value, n = $("pwNew").value, n2 = $("pwNew2").value;
+    if(n !== n2) return say("Die beiden neuen Passwörter sind nicht gleich.");
+    const { error } = await sb.rpc("change_teacher_pw", { p_old:o, p_new:n });
+    say(error ? clsErr(error) : "Lehrer-Passwort geändert.");
+  };
+  if($("clsCreate")){
+    $("clsCreate").onclick = async () => {
+      const sname = $("clsNew").value.trim(), tname = $("clsTName").value.trim();
+      if(!sname){ say("Gib der Sitzung einen Namen."); return $("clsNew")?.focus(); }
+      writeJSON(TNAME_KEY, tname); $("clsCreate").disabled = true;
+      const { data, error } = await sb.rpc("start_session", { p_name:sname, p_teacher:tname });
+      if(error) return say(clsErr(error));
+      clsMsg = ""; await clsLoad(); openClass(data.id, "Sitzung gestartet – zeig den Code deinen Schülern.");
+    };
+    $("clsNew").onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); $("clsCreate").click(); } };
+  }
+}
+async function openClass(id, msg){
+  view = { name:"class", id, msg:msg || "" }; clsMembers = null;
+  render();
+  await clsLoadMembers();
+  if(clsChan){ try{ sb.removeChannel(clsChan); }catch(e){} }
+  clsChan = sb.channel("session-" + id)
+    .on("postgres_changes", { event:"*", schema:"public", table:"participants", filter:"session_id=eq." + id }, () => clsLoadMembers())
+    .on("postgres_changes", { event:"DELETE", schema:"public", table:"participants" }, p => { const o = p.old || {};
+      if(!o.session_id || o.session_id === id){ clsLoadMembers(); if(o.user_id === sbUser.id) clsLoad(); } })
+    .on("postgres_changes", { event:"*", schema:"public", table:"sessions", filter:"id=eq." + id }, () => clsLoad())
+    .subscribe();
+}
+async function clsLoadMembers(){
+  const c = clsOf(view.id); if(!c || view.name !== "class") return;
+  if(c.role !== "teacher"){ clsMembers = []; return renderClass(); }
+  const { data, error } = await sb.from("participants").select("user_id, display_name, joined_at").eq("session_id", c.id).order("joined_at");
+  clsMembers = error ? null : data; if(error) view.msg = clsErr(error);
+  if(view.name === "class") renderClass();
+}
+function renderClass(){
+  const c = clsOf(view.id);
+  if(!c){ app.innerHTML = `<div class="top"><button class="ghost" id="back">Zurück</button></div><p>Lade Sitzung …</p>`; document.getElementById("back").onclick = closeClass; return; }
+  const T = c.role === "teacher";
+  const studs = clsMembers || [];
+  const link = location.origin + location.pathname + "?join=" + c.code;
+  const two = (k, label, yesId, yesLabel) => view.confirm === k ? `<span class="row" style="flex:0 0 auto"><button class="danger" id="${yesId}">${yesLabel}</button><button class="ghost" id="cNo">Abbrechen</button></span>` : `<button class="danger" data-ask="${k}">${label}</button>`;
+  app.innerHTML = `
+    <div class="top"><button class="ghost" id="back">Zurück</button>
+      <span class="row" style="flex:0 0 auto">${T ? (c.active ? two("end", "Sitzung beenden", "endYes", "Ja, beenden") : "") + two("del", "Löschen", "delYes", "Ja, löschen") : two("leave", "Sitzung verlassen", "leaveYes", "Ja, verlassen")}</span></div>
+    ${view.editName && T ? `<div class="row" style="margin-bottom:14px"><div><label for="cnName">Name der Sitzung</label><input id="cnName" maxlength="80" value="${esc(c.name)}"></div><button id="cnSave">Speichern</button><button class="ghost" id="cnCancel">Abbrechen</button></div>`
+      : `<div class="ttl"><h2>${esc(c.name)}</h2>${T ? `<button class="icon" id="cnEdit" aria-label="Namen ändern">✎ Bearbeiten</button>` : ""}</div>`}
+    <p class="sub">${T ? "Deine Sitzung" + (c.teacher_name ? " · Schüler sehen dich als „" + esc(c.teacher_name) + "“" : "") : "Lehrkraft: " + esc(c.teacher_name || "–") + " · du heißt hier „" + esc(c.me) + "“"}
+      · <span class="role ${c.active ? "t" : ""}" style="margin:0">${c.active ? "läuft" : "beendet" + (c.ended_at ? " am " + new Date(c.ended_at).toLocaleDateString("de-DE") : "")}</span></p>
+    <div class="status" id="status"></div>
+    ${T && c.active ? `<div class="panel">
+      <h2 style="font-size:1.15rem">Beitrittscode</h2>
+      <div class="bigcode">${esc(fmtCode(c.code))}</div>
+      <p class="small" style="margin:0 0 12px">Schüler öffnen die App, geben ihren Namen und diesen Code ein – ganz ohne Anmeldung. Oder sie öffnen den Einladungslink.</p>
+      <div class="row"><button class="ghost" id="cpCode">Code kopieren</button><button class="ghost" id="cpLink">Einladungslink kopieren</button><button class="ghost" id="newCode">Neuen Code erzeugen</button></div>
+      <label class="check" style="margin-top:12px"><input type="checkbox" id="clsOpen" ${c.open ? "checked" : ""}> Neue Schüler dürfen beitreten</label>
+    </div>` : ""}
+    ${T ? `<div class="panel">
+      <h2 style="font-size:1.15rem">Teilnehmer (${studs.length})</h2>
+      ${clsMembers === null ? `<p class="small">Lade …</p>` : !studs.length ? `<div class="empty">${c.active ? "Noch niemand beigetreten. Neue Schüler erscheinen hier sofort." : "Niemand war in dieser Sitzung."}</div>` :
+        `<ul class="studs">${studs.map(m => `<li><span><b>${esc(m.display_name)}</b> <span class="when">${new Date(m.joined_at).toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit" })} Uhr</span></span>
+          ${view.rmId === m.user_id ? `<span class="row" style="flex:0 0 auto"><button class="danger" data-rmyes="${m.user_id}">Entfernen</button><button class="ghost" data-rmno>Nein</button></span>` : `<button class="icon" data-rm="${m.user_id}" aria-label="${esc(m.display_name)} entfernen">✕</button>`}</li>`).join("")}</ul>`}
+    </div>` : `<div class="panel">
+      ${c.active ? `<p style="margin:0 0 12px"><span class="sbdot live"></span>Du bist in der Sitzung. Deine Lehrkraft sieht dich in der Liste.</p>` : `<p style="margin:0 0 12px">Diese Sitzung ist beendet.</p>`}
+      <div class="row"><div><label for="myName">Dein Name</label><input id="myName" maxlength="40" value="${esc(c.me)}"></div><button id="myNameSave">Speichern</button></div>
+    </div>`}
+    <div class="panel"><h2 style="font-size:1.15rem">Demnächst</h2><p class="small" style="margin:4px 0 0">Hier kommen später Kapitel und Aufgaben für die Sitzung hin.</p></div>`;
+  setStatus(view.msg || "");
+  const $ = id => document.getElementById(id);
+  $("back").onclick = closeClass;
+  const reload = async msg => { view.msg = msg || ""; await clsLoad(); };
+  app.querySelectorAll("[data-ask]").forEach(b => b.onclick = () => { view.confirm = b.dataset.ask; renderClass(); });
+  if($("cNo")) $("cNo").onclick = () => { view.confirm = null; renderClass(); };
+  if($("endYes")) $("endYes").onclick = async () => { view.confirm = null; const { error } = await sb.rpc("end_session", { p_session:c.id });
+    if(error) return setStatus(clsErr(error)); reload("Sitzung beendet – niemand kann mehr beitreten."); };
+  if($("delYes")) $("delYes").onclick = async () => { const { error } = await sb.from("sessions").delete().eq("id", c.id);
+    if(error) return setStatus(clsErr(error)); closeClass(`„${c.name}“ gelöscht.`); };
+  if($("leaveYes")) $("leaveYes").onclick = async () => { const { error } = await sb.from("participants").delete().eq("session_id", c.id).eq("user_id", sbUser.id);
+    if(error) return setStatus(clsErr(error)); closeClass(`Du hast „${c.name}“ verlassen.`); };
+  if($("cnEdit")) $("cnEdit").onclick = () => { view.editName = true; renderClass(); $("cnName").focus(); };
+  if($("cnCancel")) $("cnCancel").onclick = () => { view.editName = false; renderClass(); };
+  if($("cnSave")) $("cnSave").onclick = async () => { const n = $("cnName").value.trim(); if(!n) return;
+    const { error } = await sb.from("sessions").update({ name:n }).eq("id", c.id); view.editName = false;
+    if(error) return setStatus(clsErr(error)); reload("Name gespeichert"); };
+  const copy = async (text, ok) => { try{ await navigator.clipboard.writeText(text); setStatus(ok); }
+    catch(e){ const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select();
+      try{ document.execCommand("copy"); setStatus(ok); }catch(e2){ setStatus(text); } t.remove(); } };
+  if($("cpCode")) $("cpCode").onclick = () => copy(fmtCode(c.code), "Code kopiert");
+  if($("cpLink")) $("cpLink").onclick = () => copy(link, "Einladungslink kopiert");
+  if($("newCode")) $("newCode").onclick = async () => { const { error } = await sb.rpc("renew_session_code", { p_session:c.id });
+    if(error) return setStatus(clsErr(error)); reload("Neuer Code erzeugt – der alte gilt nicht mehr."); };
+  if($("clsOpen")) $("clsOpen").onchange = async e => { const { error } = await sb.from("sessions").update({ open:e.target.checked }).eq("id", c.id);
+    if(error) return setStatus(clsErr(error)); reload(e.target.checked ? "Beitritt wieder offen" : "Beitritt geschlossen"); };
+  app.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { view.rmId = b.dataset.rm; renderClass(); });
+  app.querySelectorAll("[data-rmno]").forEach(b => b.onclick = () => { view.rmId = null; renderClass(); });
+  app.querySelectorAll("[data-rmyes]").forEach(b => b.onclick = async () => {
+    const { error } = await sb.from("participants").delete().eq("session_id", c.id).eq("user_id", b.dataset.rmyes);
+    view.rmId = null; if(error) return setStatus(clsErr(error)); view.msg = "Teilnehmer entfernt"; clsLoadMembers(); });
+  if($("myNameSave")) $("myNameSave").onclick = async () => { const n = $("myName").value.trim(); if(!n) return;
+    const { error } = await sb.from("participants").update({ display_name:n }).eq("session_id", c.id).eq("user_id", sbUser.id);
+    if(error) return setStatus(clsErr(error)); writeJSON(NAME_KEY, n); reload("Name gespeichert"); };
+}
+function closeClass(msg){
+  if(clsChan){ try{ sb.removeChannel(clsChan); }catch(e){} clsChan = null; }
+  view = { name:"home", msg: typeof msg === "string" ? msg : "" }; clsLoad(); render();
+}
+
+
+/* ---------- Antwort prüfen ---------- */
+const stripAcc = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").normalize("NFC");
+const ROOF = { "â":"a","ê":"e","î":"i","ô":"o","û":"u","Â":"A","Ê":"E","Î":"I","Ô":"O","Û":"U" };
+function norm(s, st){
+  let x = String(s).normalize("NFC");
+  if(!st.case) x = x.toLowerCase();
+  x = x.replace(/[’‘ʼ`´]/g, "'").replace(/[()\[\]]/g, " ");
+  if(st.punct) x = x.replace(/[.!?¿¡…]/g, "");
+  if(st.allRoofs) x = x.replace(/[âêîôûÂÊÎÔÛ]/g, c => ROOF[c]);
+  else if(st.oRoof) x = x.replace(/[ôÔ]/g, c => ROOF[c]);
+  if(!st.apos) x = x.replace(/'/g, " ");
+  if(!st.accents) x = stripAcc(x);
+  x = st.spaces ? x.replace(/\s+/g, "") : x.replace(/\s+/g, " ").replace(/\s*'\s*/g, "'").trim();
+  return x;
+}
+function splitAlts(text, st){
+  const re = st.commaSplit ? /[;,/]/ : /;/;
+  const out = new Set([text.trim()]);
+  text.split(re).forEach(p => p.trim() && out.add(p.trim()));
+  return [...out];
+}
+function expandBrackets(t){
+  // "(se) laver" → "se laver", "laver"
+  let res = [t];
+  for(let k=0; k<5 && res.some(r => /\([^()]*\)/.test(r)); k++){
+    res = res.flatMap(r => { const m = r.match(/\(([^()]*)\)/); if(!m) return [r];
+      return [r.replace(m[0], m[1]), r.replace(m[0], " ")]; });
+  }
+  return res.map(r => r.replace(/\s+/g, " ").trim()).filter(Boolean);
+}
+function solutionsFor(word, vars, art, st){
+  let alts = [word, ...(vars||[])].flatMap(w => splitAlts(w, st));
+  if(st.brackets) alts = alts.flatMap(expandBrackets);
+  alts = [...new Set(alts)];
+  if(!art) return { sols:alts, bare:[] };
+  const withArt = alts.map(a => disp(art, a));
+  return st.article ? { sols:withArt, bare:alts } : { sols:[...withArt, ...alts], bare:[] };
+}
+function solutionsCard(w, vars, art, w2, art2, st){
+  const A = solutionsFor(w, vars, art, st);
+  if(!w2) return A;
+  const B = solutionsFor(w2, [], art2, st);
+  const combos = [];
+  for(const x of A.sols.slice(0, 12)) for(const y of B.sols.slice(0, 12)) for(const sep of [" / ", "; ", ", ", " "]) combos.push(x + sep + y, y + sep + x);
+  return { sols:[...A.sols, ...B.sols, ...combos], bare:[...A.bare, ...B.bare] };
+}
+function lev(a,b){
+  const m = a.length, n = b.length, d = Array.from({length:m+1}, (_, i) => [i]);
+  for(let j=1;j<=n;j++) d[0][j] = j;
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++) d[i][j] = Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1] + (a[i-1]===b[j-1]?0:1));
+  return d[m][n];
+}
+function check(input, S, st){
+  const g = norm(input, st); if(!g) return { r:"wrong" };
+  if(S.sols.some(s => norm(s, st) === g)) return { r:"right" };
+  if(S.bare.some(s => norm(s, st) === g)) return { r:"article" };
+  const loose = { ...st, case:false, accents:false, apos:false, spaces:true, allRoofs:true, punct:true };
+  const hit = S.sols.find(s => norm(s, loose) === norm(input, loose));
+  if(hit){
+    const why = [];
+    if(st.case && norm(hit,{...st,case:false}) === norm(input,{...st,case:false})) why.push("Groß- und Kleinschreibung");
+    else {
+      if(st.accents && stripAcc(norm(hit,loose)) === stripAcc(norm(input,loose)) && norm(hit,{...st,accents:false,case:false}) === norm(input,{...st,accents:false,case:false})) why.push("die Akzente");
+      if(st.apos && norm(hit,{...st,apos:false,case:false,accents:false}) === norm(input,{...st,apos:false,case:false,accents:false}) && norm(hit,{...st,accents:false,case:false}) !== norm(input,{...st,accents:false,case:false})) why.push("den Apostroph");
+      if(!st.spaces && norm(hit,{...st,spaces:true}) === g.replace(/\s+/g,"")) why.push("die Leerzeichen");
+    }
+    return { r:"detail", why: why.length ? why : ["die Schreibweise"] };
+  }
+  const ty = S.sols.find(s => { const n = norm(s, st); return n.length > 4 && lev(n, g) === 1; });
+  if(ty) return { r: st.typo ? "typo" : "almost" };
+  return { r:"wrong" };
+}
+function settingsFor(d, c){
+  const s = subOf(d, c);
+  return s && s.own ? { ...d.settings, ...s.settings } : d.settings;
+}
+
+/* ---------- Leitner ---------- */
+function grade(card, ok){
+  if(ok){ card.box = Math.min(4, (card.box||0) + 1); card.right = (card.right||0) + 1; }
+  else { card.box = 0; card.wrong = (card.wrong||0) + 1; }
+  card.due = now() + INTERVALS[card.box] * DAY - 60000;
+}
+
+/* ---------- Auswahl Kapitel / Unterkapitel ---------- */
+function partsOf(d){
+  const parts = [];
+  const loose = d.cards.filter(c => !subOf(d,c)).length + d.conj.filter(t => !subOf(d,t)).length;
+  if(!d.subs.length || loose) parts.push({ key:d.id + "|", name: d.subs.length ? "Ohne Unterkapitel" : d.name, n:loose });
+  d.subs.forEach(s => parts.push({ key:d.id + "|" + s.id, name:s.name, n:d.cards.filter(c => c.sub === s.id).length + d.conj.filter(t => t.sub === s.id).length }));
+  return parts;
+}
+function treeHtml(list, sel, single){
+  return `<div class="tree">${list.map(d => {
+    const parts = partsOf(d);
+    if(!d.subs.length) return `<div class="grp"><label><input type="checkbox" data-sel="${d.id}|" ${sel.has(d.id+"|")?"checked":""}> ${esc(d.name)} <span class="chap">(${d.cards.length})</span></label></div>`;
+    return `<div class="grp">${single ? "" : `<label><input type="checkbox" data-seldeck="${d.id}"> ${esc(d.name)} <span class="chap">(${d.cards.length})</span></label>`}
+      <div class="kids" ${single ? 'style="margin-left:0"' : ""}>${parts.map(p => `<label><input type="checkbox" data-sel="${p.key}" ${sel.has(p.key)?"checked":""}> ${esc(p.name)} <span class="chap">(${p.n})</span></label>`).join("")}</div></div>`;
+  }).join("")}</div>`;
+}
+function wireTree(list, sel){
+  app.querySelectorAll("[data-sel]").forEach(c => c.onchange = () => { c.checked ? sel.add(c.dataset.sel) : sel.delete(c.dataset.sel); render(); });
+  app.querySelectorAll("[data-seldeck]").forEach(c => {
+    const keys = partsOf(deckOf(c.dataset.seldeck)).map(p => p.key);
+    const n = keys.filter(k => sel.has(k)).length;
+    c.checked = n === keys.length; c.indeterminate = n > 0 && n < keys.length;
+    c.onchange = () => { keys.forEach(k => c.checked ? sel.add(k) : sel.delete(k)); render(); };
+  });
+}
+const cardsIn = sel => decks.flatMap(d => d.cards.filter(c => sel.has(keyOf(d,c))));
+
+const conjIn = sel => decks.flatMap(d => d.conj.filter(t => sel.has(keyOf(d,t))));
+function studyOptions(sel){
+  const cards = cardsIn(sel), tabs = conjIn(sel);
+  const counts = { all:cards.length, due:cards.filter(isDue).length, hard:cards.filter(c => (c.box||0) === 0).length };
+  return `<div class="row" style="margin:10px 0 12px">
+    <div><label for="dir">Richtung</label><select id="dir">
+      <option value="ab">vorne → hinten</option>
+      <option value="ba">hinten → vorne</option>
+      <option value="mix">Gemischt</option></select></div>
+    <div><label for="which">Welche Wörter</label><select id="which">
+      <option value="all">Alle (${counts.all})</option>
+      <option value="due">Nur fällige (${counts.due})</option>
+      <option value="hard">Nur Fach 1 (${counts.hard})</option></select></div>
+  </div>
+  <div class="modes">
+    <button data-mode="write" ${counts.all?"":"disabled"}>Abfrage (Schreiben)</button>
+    <button data-mode="flash" ${counts.all?"":"disabled"}>Karteikarten</button>
+    <button data-mode="choice" ${counts.all?"":"disabled"}>Auswahl</button>
+    ${tabs.length ? `<button data-mode="conj">Konjugation / Deklination (${tabs.length})</button>` : ""}
+  </div>`;
+}
+function wireStudyOptions(sel){
+  const d = document.getElementById("dir"), w = document.getElementById("which");
+  if(view.dir) d.value = view.dir; if(view.which) w.value = view.which;
+  d.onchange = () => view.dir = d.value; w.onchange = () => view.which = w.value;
+  app.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => startStudy([...sel], b.dataset.mode, d.value, w.value));
+}
+
+/* ---------- Ansichten ---------- */
+/* ---------- Sonderzeichen ---------- */
+const CHARSETS = [
+  { name:"Französisch", keys:["franz"], chars:"é è ê ë à â æ ç î ï ô œ ù û ü ÿ « » ’" },
+  { name:"Deutsch", keys:["deutsch"], chars:"ä ö ü ß „ “" },
+  { name:"Spanisch", keys:["span"], chars:"á é í ó ú ñ ü ¿ ¡" },
+  { name:"Italienisch", keys:["ital"], chars:"à è é ì í î ò ó ù ú" },
+  { name:"Portugiesisch", keys:["portug"], chars:"á â ã à ç é ê í ó ô õ ú" },
+  { name:"Englisch", keys:["engl"], chars:"’ “ ” – …" },
+  { name:"Latein", keys:["latein","latin"], chars:"ā ē ī ō ū ȳ ă ĕ ĭ ŏ ŭ" },
+  { name:"Niederländisch", keys:["niederl","holl"], chars:"é ë ï ö ü ĳ" },
+  { name:"Dänisch / Norwegisch / Schwedisch", keys:["dän","dan","norweg","schwed"], chars:"å æ ø ä ö é" },
+  { name:"Polnisch", keys:["poln"], chars:"ą ć ę ł ń ó ś ź ż" },
+  { name:"Tschechisch", keys:["tschech"], chars:"á č ď é ě í ň ó ř š ť ú ů ý ž" },
+  { name:"Kroatisch / Serbisch", keys:["kroat","serb","bosn"], chars:"č ć đ š ž" },
+  { name:"Ungarisch", keys:["ungar"], chars:"á é í ó ö ő ú ü ű" },
+  { name:"Rumänisch", keys:["rumän","ruman"], chars:"ă â î ș ț" },
+  { name:"Türkisch", keys:["türk","turk"], chars:"ç ğ ı İ ö ş ü" },
+  { name:"Griechisch", keys:["griech"], chars:"α β γ δ ε ζ η θ ι κ λ μ ν ξ ο π ρ σ ς τ υ φ χ ψ ω ά έ ή ί ό ύ ώ ϊ ϋ" },
+  { name:"Russisch", keys:["russ"], chars:"а б в г д е ё ж з и й к л м н о п р с т у ф х ц ч ш щ ъ ы ь э ю я" },
+  { name:"Ukrainisch", keys:["ukrain"], chars:"ґ є і ї й ь ’" },
+  { name:"Satzzeichen", keys:[], chars:"’ « » „ “ ” ‹ › ¿ ¡ … – — ·" },
+].map(c => ({ ...c, list:c.chars.split(" ") }));
+const UI_KEY = "karteikasten-ui-v1";
+let ui = { left:"auto", right:"auto", upL:false, upR:false, sort:"created", open:false };
+try{ Object.assign(ui, JSON.parse(localStorage.getItem(UI_KEY) || "{}")); }catch(e){}
+const saveUi = () => { try{ localStorage.setItem(UI_KEY, JSON.stringify(ui)); }catch(e){} };
+let lastField = null;
+document.addEventListener("focusin", e => { if(e.target.matches && e.target.matches('input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea')) lastField = e.target; });
+const langSet = lang => { const l = String(lang||"").toLowerCase(); return CHARSETS.find(c => c.keys.some(k => l.includes(k))); };
+function contextLangs(){
+  let d = null;
+  if(view.name === "deck") d = deckOf(view.id);
+  else if(view.name === "study"){ const q = view.queue && view.queue[view.i]; d = q && deckOf(q.d);
+    if(d && q && !q.conj && q.flip) return [d.to, d.from]; }
+  else d = decks[0];
+  return d ? [d.from, d.to] : ["Deutsch", "Französisch"];
+}
+const upper = ch => ch === "ß" ? "ẞ" : ch.toUpperCase().length === 1 ? ch.toUpperCase() : ch;
+function charPanel(side, lang){
+  const choice = ui[side];
+  const auto = langSet(lang);
+  const sets = choice === "all" ? CHARSETS : [choice === "auto" ? (auto || CHARSETS.find(c => c.name === "Satzzeichen")) : CHARSETS.find(c => c.name === choice) || CHARSETS[0]];
+  const up = side === "left" ? ui.upL : ui.upR;
+  return `<div class="chars ${side} ${ui.open ? "open" : ""}" aria-label="Sonderzeichen ${side === "left" ? "links" : "rechts"}">
+    <p class="cap">${side === "left" ? "Links" : "Rechts"} · antippen zum Einfügen</p>
+    <div class="chd"><select data-cs="${side}" aria-label="Sprache wählen">
+      <option value="auto" ${choice==="auto"?"selected":""}>Automatisch${auto ? " (" + esc(auto.name.split(" ")[0]) + ")" : ""}</option>
+      <option value="all" ${choice==="all"?"selected":""}>Alle Sprachen</option>
+      ${CHARSETS.slice().sort((a,b) => a.name.localeCompare(b.name, "de")).map(c => `<option value="${esc(c.name)}" ${choice===c.name?"selected":""}>${esc(c.name)}</option>`).join("")}
+    </select><button class="up" data-up="${side}" aria-pressed="${up}" aria-label="Großbuchstaben">⇧</button></div>
+    <div class="ks">${sets.map(set => (sets.length > 1 ? `<span class="gl">${esc(set.name)}</span>` : "") +
+      set.list.map(ch => { const c = up ? upper(ch) : ch; return `<button type="button" data-ch="${esc(c)}" aria-label="${esc(c)} einfügen">${esc(c)}</button>`; }).join("")).join("")}</div>
+  </div>`;
+}
+function updateChars(){
+  let host = document.getElementById("charsHost");
+  if(!host){ host = document.createElement("div"); host.id = "charsHost"; document.body.appendChild(host);
+    host.addEventListener("mousedown", e => { if(e.target.closest("[data-ch], .up")) e.preventDefault(); });
+    host.addEventListener("click", e => {
+      const b = e.target.closest("[data-ch]");
+      if(b){ insertChar(b.dataset.ch); return; }
+      const u = e.target.closest("[data-up]");
+      if(u){ const k = u.dataset.up === "left" ? "upL" : "upR"; ui[k] = !ui[k]; saveUi(); updateChars(); return; }
+      if(e.target.closest(".charsToggle")){ ui.open = !ui.open; saveUi(); updateChars(); }
+    });
+    host.addEventListener("change", e => { const s = e.target.closest("[data-cs]"); if(s){ ui[s.dataset.cs] = s.value; saveUi(); updateChars(); } });
+  }
+  const [L, R] = contextLangs();
+  host.innerHTML = charPanel("left", L) + charPanel("right", R) +
+    `<button class="charsToggle" type="button" aria-expanded="${ui.open}">${ui.open ? "✕ Zeichen" : "é ß ñ"}</button>`;
+}
+function insertChar(ch){
+  const f = lastField;
+  if(!f || !document.body.contains(f) || f.disabled || f.readOnly){ setStatus("Tippe zuerst in ein Feld, dann auf das Zeichen"); return; }
+  f.focus();
+  const a = f.selectionStart ?? f.value.length, b = f.selectionEnd ?? f.value.length;
+  f.setRangeText(ch, a, b, "end");
+  f.dispatchEvent(new Event("input", { bubbles:true }));
+}
+
+function render(){
+  renderView();
+  updateChars();
+  // nach dem Neuzeichnen das passende Feld wiederfinden
+  if(lastField && !document.body.contains(lastField)) lastField = null;
+}
+function renderView(){
+  if(view.name === "home") return renderHome();
+  if(view.name === "deck") return renderDeck();
+  if(view.name === "study") return renderStudy();
+  if(view.name === "done") return renderDone();
+  if(view.name === "import") return renderImport();
+  if(view.name === "class") return renderClass();
+}
+
+function renderHome(){
+  const deckBtn = d => {
+    const due = d.cards.filter(isDue).length;
+    return `<button class="deck" data-open="${d.id}">
+      <span class="nm">${esc(d.name)}</span>
+      <span class="lp">${esc(d.from)} → ${esc(d.to)} · ${d.cards.length} Wörter${d.subs.length ? " · " + d.subs.length + " Unterkapitel" : ""}</span><br>
+      <span class="due ${due ? "" : "none"}">${due ? due + " fällig" : "Alles gelernt"}</span>
+    </button>`;
+  };
+  const sorted = decks.slice();
+  if(ui.sort === "name") sorted.sort((a,b) => a.name.localeCompare(b.name, "de", { numeric:true }));
+  if(ui.sort === "lang") sorted.sort((a,b) => (a.to + a.from).localeCompare(b.to + b.from, "de") || a.name.localeCompare(b.name, "de", { numeric:true }));
+  let list;
+  if(ui.sort === "lang"){
+    const groups = new Map();
+    sorted.forEach(d => { const k = d.to.trim() || "Ohne Sprache"; if(!groups.has(k)) groups.set(k, []); groups.get(k).push(d); });
+    list = [...groups].map(([k, ds]) => `<div class="langhead">${esc(k)} <span class="chap">(${ds.length})</span></div><div class="decks">${ds.map(deckBtn).join("")}</div>`).join("");
+  } else list = `<div class="decks">${sorted.map(deckBtn).join("")}</div>`;
+  const sortBar = decks.length > 1 ? `<div class="sortbar"><label for="sortBy" class="small">Sortieren</label><select id="sortBy">
+      <option value="created" ${ui.sort==="created"?"selected":""}>Nach Erstellung</option>
+      <option value="name" ${ui.sort==="name"?"selected":""}>Nach Name</option>
+      <option value="lang" ${ui.sort==="lang"?"selected":""}>Nach Sprache</option></select></div>` : "";
+  const sel = view.sel || (view.sel = new Set());
+  const showTree = decks.length > 1 || decks.some(d => d.subs.length);
+  app.innerHTML = `
+    <h1>Karteikasten</h1>
+    <p class="sub">Lege Kapitel und Unterkapitel an, übe mit Abfrage, Karteikarten oder Auswahl – was du gut kannst, wandert ein Fach weiter.</p>
+    <div class="status" id="status"></div>
+    ${decks.length ? sortBar + list : `<div class="panel empty">Noch keine Kapitel. Leg unten dein erstes an.</div>`}
+    ${showTree ? `<div class="panel">
+      <h2 style="font-size:1.15rem">Mehrere Kapitel zusammen abfragen</h2>
+      ${treeHtml(decks, sel, false)}
+      <div class="row"><button class="ghost" id="selAll">Alle auswählen</button><button class="ghost" id="selNone">Keine</button></div>
+      ${sel.size ? studyOptions(sel) : `<p class="small" style="margin:10px 0 0">Wähle mindestens ein Kapitel oder Unterkapitel aus.</p>`}
+      <p class="small" style="margin:10px 0 0">Jedes Wort wird nach den Einstellungen seines eigenen Kapitels geprüft.</p>
+    </div>` : ""}
+    <div class="panel">
+      <h2>Neues Kapitel</h2>
+      <div class="row" style="margin-top:12px">
+        <div><label for="nName">Name</label><input id="nName" placeholder="z. B. Französisch Unité 2"></div>
+        <div><label for="nFrom">Sprache vorne</label><input id="nFrom" value="Deutsch"></div>
+        <div><label for="nTo">Sprache hinten</label><input id="nTo" value="Französisch"></div>
+        <button id="create">Kapitel anlegen</button>
+      </div>
+    </div>
+    ${sbPanelHtml()}
+    ${clsPanelHtml()}
+    <div class="panel">
+      <h2 style="font-size:1.15rem">Speichern & Weitergeben</h2>
+      <p class="small" style="margin:4px 0 10px">Speichert eine HTML-Datei, in der die Vokabeln schon drin sind. Wer sie öffnet, hat sofort alle ausgewählten Kapitel – auch ohne Internet.</p>
+      ${decks.length ? `<div class="pick">${decks.map(d => `<label><input type="checkbox" data-exp="${d.id}" checked> ${esc(d.name)} <span class="chap">(${d.cards.length + d.conj.length})</span></label>`).join("")}</div>` : ""}
+      <label class="check" style="margin-bottom:${sbCfg ? 4 : 12}px"><input type="checkbox" id="expProg"> Lernstand (Fächer) mitspeichern – sonst fängt man bei Fach 1 an</label>
+      ${sbCfg ? `<label class="check" style="margin-bottom:12px"><input type="checkbox" id="expSb" checked> Supabase-Verbindung mit einbauen (z. B. für GitHub Pages – dann muss sich jeder nur noch anmelden)</label>` : ""}
+      <div class="row"><button id="expHtml">Als HTML speichern</button>
+      <button class="ghost" id="exp">Nur Daten (.json)</button>
+      <button class="ghost" id="impBtn">Datei laden</button><input type="file" id="imp" accept=".json,.html,.htm,application/json,text/html" hidden></div>
+      <p class="small" style="margin:10px 0 0">„Datei laden“ nimmt eine HTML-Datei von jemand anderem (oder eine .json). Nichts wird überschrieben: Neue Kapitel und Wörter kommen dazu, und bei Wörtern, die du schon hast, wirst du gefragt.</p>
+    </div>`;
+  setStatus(view.msg || baseStatus()); view.msg = "";
+  app.querySelectorAll("[data-open]").forEach(b => b.onclick = () => openDeck(b.dataset.open));
+  const sb = document.getElementById("sortBy"); if(sb) sb.onchange = () => { ui.sort = sb.value; saveUi(); render(); };
+  if(showTree){
+    wireTree(decks, sel);
+    document.getElementById("selAll").onclick = () => { decks.forEach(d => partsOf(d).forEach(p => sel.add(p.key))); render(); };
+    document.getElementById("selNone").onclick = () => { sel.clear(); render(); };
+    if(sel.size) wireStudyOptions(sel);
+  }
+  document.getElementById("create").onclick = () => {
+    const name = document.getElementById("nName").value.trim() || "Neues Kapitel";
+    const d = fixDeck({ id: uidGen(), name, from: document.getElementById("nFrom").value.trim() || "Sprache A",
+      to: document.getElementById("nTo").value.trim() || "Sprache B", cards: [], created: now() });
+    decks.push(d); persist(d); openDeck(d.id);
+  };
+  document.getElementById("exp").onclick = exportBackup;
+  document.getElementById("expHtml").onclick = exportHtml;
+  const imp = document.getElementById("imp");
+  document.getElementById("impBtn").onclick = () => imp.click();
+  imp.onchange = () => imp.files[0] && importBackup(imp.files[0]);
+  wireSb();
+  wireCls();
+}
+function openDeck(id){
+  const d = deckOf(id);
+  view = { name:"deck", id, tab:"add", sel:new Set(partsOf(d).map(p => p.key)), rows:blankRows(5), setTarget:"" };
+  render();
+}
+const blankRows = n => Array.from({length:n}, () => ({ aa:"", a:"", ba:"", b:"", aa2:"", a2:"", ba2:"", b2:"", pair:false }));
+const draftOf = c => ({ aa:c.aa, a:[c.a, ...c.av].join("; "), ba:c.ba, b:[c.b, ...c.bv].join("; "), aa2:c.aa2||"", a2:c.a2||"", ba2:c.ba2||"", b2:c.b2||"", pair:!!(c.a2 || c.b2) });
+
+function rowHtml(i, r, d, opt){
+  opt = opt || {};
+  const p2 = r.pair ? `<div class="pair p2"><input class="art" data-f="aa2" placeholder="${esc(artHint(d.from))}" aria-label="Artikel 2. Wort ${esc(d.from)}" value="${esc(r.aa2||"")}" autocomplete="off"><input class="wd" data-f="a2" placeholder="2. Wort, z. B. Lehrerin" aria-label="2. Wort ${esc(d.from)}" value="${esc(r.a2||"")}" autocomplete="off"></div>
+    <div class="pair p2"><input class="art" data-f="ba2" placeholder="${esc(artHint(d.to))}" aria-label="Artikel 2. Wort ${esc(d.to)}" value="${esc(r.ba2||"")}" autocomplete="off"><input class="wd" data-f="b2" placeholder="2. Wort" aria-label="2. Wort ${esc(d.to)}" value="${esc(r.b2||"")}" autocomplete="off"></div><span class="sp"></span>` : "";
+  return `<div class="vrow" data-row="${i}">
+    <div class="pair"><input class="art" data-f="aa" placeholder="${esc(artHint(d.from))}" aria-label="Artikel ${esc(d.from)}" value="${esc(r.aa)}" autocomplete="off"><input class="wd" data-f="a" aria-label="${esc(d.from)}" value="${esc(r.a)}" autocomplete="off"></div>
+    <div class="pair"><input class="art" data-f="ba" placeholder="${esc(artHint(d.to))}" aria-label="Artikel ${esc(d.to)}" value="${esc(r.ba)}" autocomplete="off"><input class="wd" data-f="b" aria-label="${esc(d.to)}" value="${esc(r.b)}" autocomplete="off"></div>
+    <span class="rbtn"><button class="icon" data-pair="${i}" aria-pressed="${!!r.pair}" aria-label="Wortpaar (2. Wort mit eigenem Artikel)" title="Wortpaar">⇄</button>${opt.edit ? "" : `<button class="icon" data-rmrow="${i}" aria-label="Zeile entfernen">✕</button>`}</span>
+    ${p2}
+  </div>`;
+}
+function subSelect(d, id, val){
+  if(!d.subs.length) return "";
+  return `<div><label for="${id}">Unterkapitel</label><select id="${id}"><option value="">Ohne Unterkapitel</option>${d.subs.map(s => `<option value="${s.id}" ${val===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</select></div>`;
+}
+function settingsHtml(d){
+  const tgt = view.setTarget || "";
+  const sub = d.subs.find(s => s.id === tgt);
+  const eff = sub ? { ...d.settings, ...(sub.own ? sub.settings : {}) } : d.settings;
+  const locked = sub && !sub.own;
+  return `<div class="settings">
+    ${d.subs.length ? `<div class="row" style="margin-bottom:8px"><div><label for="setTgt">Gilt für</label><select id="setTgt">
+      <option value="">Ganzes Kapitel</option>${d.subs.map(s => `<option value="${s.id}" ${tgt===s.id?"selected":""}>Unterkapitel: ${esc(s.name)}</option>`).join("")}</select></div></div>` : ""}
+    ${sub ? `<label class="check"><input type="checkbox" id="ownSet" ${sub.own?"checked":""}> Eigene Einstellungen für dieses Unterkapitel (sonst wie das Kapitel)</label><hr style="border:0;border-top:1px solid var(--line);margin:10px 0">` : ""}
+    ${LABELS.map(([k,l]) => `<label class="check ${locked?"off":""}"><input type="checkbox" data-set="${k}" ${eff[k]?"checked":""} ${locked?"disabled":""}> ${l}</label>`).join("")}
+  </div>`;
+}
+
+function renderDeck(){
+  const d = deckOf(view.id); if(!d){ view = {name:"home"}; return render(); }
+  const c5 = [0,0,0,0,0]; d.cards.forEach(c => c5[c.box||0]++);
+  const max = Math.max(1, ...c5);
+  const boxes = c5.map((n,i) => `<div class="bx"><div class="bar"><div class="fill" style="height:${n/max*100}%"></div></div><b>${n}</b>Fach ${i+1}</div>`).join("");
+  const tab = view.tab || "add";
+  const due = d.cards.filter(isDue).length;
+  const sel = view.sel;
+  const groups = [{ id:"", name:"Ohne Unterkapitel" }, ...d.subs];
+  if(!view.chk) view.chk = new Set();
+  const wordLi = c => c.id === view.editId ? `<li class="editing">
+      <div class="rowhead"><span>${esc(d.from)}</span><span>${esc(d.to)}</span></div>
+      <div id="editRow">${rowHtml(0, view.editDraft || (view.editDraft = draftOf(c)), d, { edit:true })}</div>
+      <div class="row" style="margin-top:4px">${subSelect(d, "editSub", subOf(d,c) ? c.sub : "")}<button id="saveEdit">Speichern</button><button class="ghost" id="cancelEdit">Abbrechen</button></div>
+    </li>` : `<li><input type="checkbox" data-chk="${c.id}" ${view.chk.has(c.id)?"checked":""} aria-label="Auswählen"><span class="w">${esc(pdisp(c.aa, c.a, c.aa2, c.a2))}${c.av.length ? `<span class="alt">auch: ${c.av.map(esc).join(", ")}</span>` : ""}</span><span class="w">${esc(pdisp(c.ba, c.b, c.ba2, c.b2))}${c.bv.length ? `<span class="alt">auch: ${c.bv.map(esc).join(", ")}</span>` : ""} <span class="b">Fach ${(c.box||0)+1}</span></span>
+      <span><button class="icon" data-edit="${c.id}" aria-label="Bearbeiten">✎</button><button class="icon" data-del="${c.id}" aria-label="Löschen">✕</button></span></li>`;
+  const listHtml = !d.cards.length ? `<div class="empty">Noch keine Wörter in diesem Kapitel.</div>` :
+    groups.map(g => { const cs = d.cards.filter(c => (subOf(d,c) ? c.sub : "") === g.id); if(!cs.length) return "";
+      const allOn = cs.every(c => view.chk.has(c.id));
+      return `<div class="subhead"><label><input type="checkbox" data-chkgrp="${g.id}" ${allOn?"checked":""}> ${d.subs.length ? esc(g.name) : "Alle auswählen"} <span class="chap">(${cs.length})</span></label></div><ul class="words sel" style="max-height:none">${cs.map((c,k) => (k === 0 ? insLi(c.id, true) : "") + wordLi(c) + insLi(c.id, false)).join("")}</ul>`; }).join("");
+  function insLi(id, before){
+    const I = view.insAt;
+    if(I && I.id === id && I.before === before) return `<li class="editing" id="insBox">
+      <div class="rowhead"><span>${esc(d.from)}</span><span>${esc(d.to)}</span></div>
+      <div id="insRow">${rowHtml(0, view.insDraft, d, { edit:true })}</div>
+      <div class="row" style="margin-top:4px"><button id="insSave">Hier einfügen</button><button class="ghost" id="insCancel">Abbrechen</button></div></li>`;
+    if(view.editId || I) return "";
+    return `<li class="insli"><button class="ins" data-ins="${id}" data-before="${before ? 1 : 0}" aria-label="Wort ${before ? "davor" : "danach"} einfügen">+ Wort hier einfügen</button></li>`;
+  }
+  const nChk = d.cards.filter(c => view.chk.has(c.id)).length;
+  const moveBar = !nChk ? `<p class="small" style="margin:0 0 10px">Tipp: Hake Wörter an, um sie in ein Unterkapitel zu verschieben.</p>` : `<div class="movebar">
+      <span style="align-self:center;font-weight:700">${nChk} ausgewählt</span>
+      <div class="grow"><label for="mvTo">Verschieben nach</label><select id="mvTo">
+        <option value="">Ohne Unterkapitel</option>${d.subs.map(s => `<option value="${s.id}" ${view.mvTo===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}
+        <option value="__new" ${view.mvTo==="__new"?"selected":""}>+ Neues Unterkapitel …</option></select></div>
+      ${view.mvTo === "__new" ? `<div class="grow"><label for="mvNew">Name</label><input id="mvNew" placeholder="z. B. Lektion 2"></div>` : ""}
+      <button id="mvGo">Verschieben</button>
+      ${view.chkDel ? `<button class="danger" id="chkDelYes">Wirklich ${nChk} löschen</button>` : `<button class="danger" id="chkDel">Löschen</button>`}
+      <button class="ghost" id="chkNone">Auswahl aufheben</button></div>`;
+
+  app.innerHTML = `
+    <div class="top"><button class="ghost" id="back">Zurück</button>
+      ${view.confirmDel ? `<span class="row" style="flex:0 0 auto"><button class="danger" id="delYes">Ja, Kapitel löschen</button><button class="ghost" id="delNo">Abbrechen</button></span>` : `<button class="danger" id="delDeck">Kapitel löschen</button>`}</div>
+    ${view.editTitle ? `<div class="titleedit">
+        <div><label for="tName">Name</label><input id="tName" value="${esc(d.name)}"></div>
+        <div><label for="tFrom">Sprache vorne</label><input id="tFrom" value="${esc(d.from)}"></div>
+        <div><label for="tTo">Sprache hinten</label><input id="tTo" value="${esc(d.to)}"></div>
+      </div><div class="row" style="margin-bottom:18px"><button id="tSave">Speichern</button><button class="ghost" id="tCancel">Abbrechen</button></div>`
+    : `<div class="ttl"><h2>${esc(d.name)}</h2><button class="icon" id="tEdit" aria-label="Titel bearbeiten">✎ Bearbeiten</button></div>
+       <p class="sub">${esc(d.from)} → ${esc(d.to)} · ${d.cards.length} Wörter · ${due} fällig</p>`}
+    <div class="status" id="status"></div>
+    <div class="panel">
+      <h2 style="font-size:1.15rem">Üben</h2>
+      ${d.subs.length ? treeHtml([d], sel, true) : ""}
+      ${studyOptions(sel)}
+      <div class="boxes">${boxes}</div>
+    </div>
+    <details class="panel" ${view.openSubs?"open":""} id="dSubs"><summary>Unterkapitel (${d.subs.length})</summary>
+      <div class="sublist">${d.subs.map(s => `<div class="sr"><input data-subname="${s.id}" value="${esc(s.name)}" aria-label="Name des Unterkapitels">
+        ${view.delSub === s.id ? `<button class="danger" data-subdelyes="${s.id}">Löschen</button><button class="ghost" data-subdelno>Nein</button>` : `<button class="icon" data-subdel="${s.id}" aria-label="Unterkapitel löschen">✕</button>`}</div>`).join("")}
+        ${view.delSub ? `<p class="small" style="margin:0">Die Wörter bleiben erhalten und landen unter „Ohne Unterkapitel“.</p>` : ""}</div>
+      <div class="row"><div><label for="newSub">Neues Unterkapitel</label><input id="newSub" placeholder="z. B. Lektion 1"></div><button id="addSub">Hinzufügen</button></div>
+    </details>
+    <details class="panel" ${view.openSet?"open":""} id="dSet"><summary>Was zählt als richtig?</summary>${settingsHtml(d)}</details>
+    <div class="panel">
+      <div class="tabs">
+        <button data-tab="add" aria-pressed="${tab==="add"}">Wörter hinzufügen</button>
+        <button data-tab="bulk" aria-pressed="${tab==="bulk"}">Liste einfügen</button>
+        <button data-tab="list" aria-pressed="${tab==="list"}">Alle Wörter</button>
+        <button data-tab="conj" aria-pressed="${tab==="conj"}">Konjugation / Deklination (${d.conj.length})</button>
+      </div>
+      ${tab==="add" ? `
+        ${d.subs.length ? `<div class="row" style="margin-bottom:10px">${subSelect(d, "addSub2", view.addSub||"")}</div>` : ""}
+        <div class="rowhead"><span>Artikel + ${esc(d.from)}</span><span>Artikel + ${esc(d.to)}</span><span></span></div>
+        <div id="rows">${view.rows.map((r,i) => (i ? `<button class="ins" data-insrow="${i}" aria-label="Leere Zeile hier einfügen">+ Zeile hier einfügen</button>` : "") + rowHtml(i, r, d)).join("")}</div>
+        <div class="row" style="margin-top:6px"><button class="ghost" id="moreRows">+ 5 Zeilen</button><button id="addAll">Alle hinzufügen</button></div>
+        <p class="small" style="margin:10px 0 0">Varianten mit „;“ trennen – jedes Wort dahinter gilt auch allein. Klammern wie „(se) laver“ sind beim Abfragen optional. Das kleine Feld links ist für den Artikel. Mit ⇄ wird die Zeile zum Wortpaar (z. B. der Lehrer / die Lehrerin) – beim Abfragen reicht eins davon. Zwischen den Zeilen kannst du mit „+ Zeile hier einfügen“ eine leere Zeile einschieben.</p>` : ""}
+      ${tab==="bulk" ? `
+        ${d.subs.length ? `<div class="row" style="margin-bottom:10px">${subSelect(d, "bulkSub", view.addSub||"")}</div>` : ""}
+        <label for="bulk">Ein Wortpaar pro Zeile, getrennt mit „ - “, „=“ oder Tab. Varianten mit „;“, Wortpaare mit „ / “ (z. B. der Lehrer / die Lehrerin).</label>
+        <textarea id="bulk" placeholder="der Hund - le chien&#10;groß; riesig = grand; gros&#10;die Schule - l’école"></textarea>
+        <label class="check"><input type="checkbox" id="autoArt" checked> Artikel am Anfang automatisch ins Artikelfeld übernehmen</label>
+        <div style="margin-top:10px"><button id="addBulk">Alle hinzufügen</button></div>` : ""}
+      ${tab==="conj" ? conjTabHtml(d) : ""}
+      ${tab==="list" && d.cards.length ? moveBar : ""}
+      ${tab==="list" ? (d.cards.some(c => (!c.aa && splitArt(c.a, d.from, true)[0]) || (!c.ba && splitArt(c.b, d.to, true)[0])) ? `<div class="row" style="margin-bottom:10px"><button class="ghost" id="moveArt">Artikel aus alten Wörtern ins Artikelfeld verschieben</button></div>` : "") + listHtml : ""}
+    </div>`;
+  setStatus(view.msg || baseStatus()); view.msg = "";
+
+  // Kopf
+  document.getElementById("back").onclick = () => { view = {name:"home"}; render(); };
+  const dd = document.getElementById("delDeck"); if(dd) dd.onclick = () => { view.confirmDel = true; render(); };
+  const dy = document.getElementById("delYes"); if(dy){ dy.onclick = async () => { await removeDeck(d.id); view = {name:"home"}; render(); };
+    document.getElementById("delNo").onclick = () => { view.confirmDel = false; render(); }; }
+  const te = document.getElementById("tEdit"); if(te) te.onclick = () => { view.editTitle = true; render(); document.getElementById("tName").focus(); };
+  const ts = document.getElementById("tSave"); if(ts){
+    ts.onclick = () => { d.name = document.getElementById("tName").value.trim() || d.name;
+      d.from = document.getElementById("tFrom").value.trim() || d.from; d.to = document.getElementById("tTo").value.trim() || d.to;
+      view.editTitle = false; persist(d); view.msg = "Titel gespeichert"; render(); };
+    document.getElementById("tCancel").onclick = () => { view.editTitle = false; render(); };
+  }
+  // Üben
+  if(d.subs.length) wireTree([d], sel);
+  wireStudyOptions(sel);
+  // Unterkapitel
+  document.getElementById("dSubs").ontoggle = e => view.openSubs = e.target.open;
+  document.getElementById("dSet").ontoggle = e => view.openSet = e.target.open;
+  app.querySelectorAll("[data-subname]").forEach(inp => inp.onchange = () => {
+    const s = d.subs.find(x => x.id === inp.dataset.subname); s.name = inp.value.trim() || s.name; persist(d); view.msg = "Unterkapitel umbenannt"; render(); });
+  app.querySelectorAll("[data-subdel]").forEach(b => b.onclick = () => { view.delSub = b.dataset.subdel; render(); });
+  app.querySelectorAll("[data-subdelno]").forEach(b => b.onclick = () => { view.delSub = null; render(); });
+  app.querySelectorAll("[data-subdelyes]").forEach(b => b.onclick = () => {
+    const id = b.dataset.subdelyes; d.subs = d.subs.filter(s => s.id !== id);
+    d.cards.forEach(c => { if(c.sub === id) c.sub = ""; }); d.conj.forEach(t => { if(t.sub === id) t.sub = ""; });
+    sel.delete(d.id + "|" + id); sel.add(d.id + "|"); view.delSub = null; if(view.setTarget === id) view.setTarget = ""; persist(d); render(); });
+  const addSubFn = () => { const inp = document.getElementById("newSub"); const n = inp.value.trim(); if(!n) return inp.focus();
+    const s = { id:uidGen(), name:n, own:false, settings:{} }; d.subs.push(s); sel.add(d.id + "|" + s.id);
+    if(!d.cards.some(c => !c.sub)) sel.delete(d.id + "|");
+    view.openSubs = true; view.addSub = s.id; persist(d); view.msg = `Unterkapitel „${n}“ angelegt`; render(); };
+  document.getElementById("addSub").onclick = addSubFn;
+  document.getElementById("newSub").onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); addSubFn(); } };
+  // Einstellungen
+  const st = document.getElementById("setTgt"); if(st) st.onchange = () => { view.setTarget = st.value; render(); };
+  const own = document.getElementById("ownSet"); if(own) own.onchange = () => {
+    const s = d.subs.find(x => x.id === view.setTarget); s.own = own.checked; if(s.own && !Object.keys(s.settings).length) s.settings = { ...d.settings }; persist(d); render(); };
+  app.querySelectorAll("[data-set]").forEach(cb => cb.onchange = () => {
+    const s = d.subs.find(x => x.id === view.setTarget);
+    (s ? s.settings : d.settings)[cb.dataset.set] = cb.checked; persist(d); setStatus("Einstellung gespeichert"); });
+  // Tabs
+  app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { view.tab = b.dataset.tab; view.editId = null; view.conjEdit = null; render(); });
+  if(tab==="conj") wireConjTab(d, sel);
+  app.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { d.cards = d.cards.filter(c => c.id !== b.dataset.del); persist(d); render(); });
+  app.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => { view.editId = b.dataset.edit; view.editDraft = null; view.insAt = null; render(); });
+  const newCard = (r, sub) => {
+    const cl = t => String(t||"").split(";").map(x => x.trim()).filter(Boolean).join("; ");
+    const pair = r.pair && (cl(r.a2) || cl(r.b2));
+    return { id:uidGen(), aa:String(r.aa||"").trim(), a:cl(r.a), av:[], ba:String(r.ba||"").trim(), b:cl(r.b), bv:[],
+      aa2: pair ? String(r.aa2||"").trim() : "", a2: pair ? cl(r.a2) : "", ba2: pair ? String(r.ba2||"").trim() : "", b2: pair ? cl(r.b2) : "",
+      sub:sub||"", box:0, due:0, right:0, wrong:0 };
+  };
+  // Zeilen-Editor (Eingabe, Wortpaar-Knopf) für Entwurfs-Objekte
+  const wireDraft = (box, getDraft) => {
+    box.addEventListener("input", e => { const f = e.target.dataset.f; if(f) getDraft(+e.target.closest("[data-row]").dataset.row)[f] = e.target.value; });
+    box.querySelectorAll("[data-pair]").forEach(b => b.onclick = () => { const r = getDraft(+b.dataset.pair); r.pair = !r.pair; render();
+      if(r.pair) document.querySelector(`#${box.id} [data-row="${b.dataset.pair}"] [data-f="aa2"]`)?.focus(); });
+  };
+  app.querySelectorAll("[data-ins]").forEach(b => b.onclick = () => { view.insAt = { id:b.dataset.ins, before:b.dataset.before === "1" }; view.insDraft = blankRows(1)[0]; render(); document.querySelector('#insRow [data-f="aa"]')?.focus(); });
+  if(tab === "list" && view.insAt){
+    const box = document.getElementById("insRow");
+    if(box){
+      wireDraft(box, () => view.insDraft);
+      const save = () => {
+        const r = view.insDraft;
+        if(!r.a.trim() || !r.b.trim()) return setStatus("Beide Seiten brauchen ein Wort");
+        const ref = d.cards.find(x => x.id === view.insAt.id);
+        const nc = newCard(r, ref ? (subOf(d, ref) ? ref.sub : "") : "");
+        const idx = ref ? d.cards.indexOf(ref) + (view.insAt.before ? 0 : 1) : d.cards.length;
+        d.cards.splice(idx, 0, nc); view.insAt = null; persist(d); view.msg = `„${nc.a}“ eingefügt`; render();
+      };
+      document.getElementById("insSave").onclick = save;
+      document.getElementById("insCancel").onclick = () => { view.insAt = null; render(); };
+      box.addEventListener("keydown", e => { if(e.key !== "Enter") return; e.preventDefault();
+        const all = [...box.querySelectorAll("input")]; const k = all.indexOf(e.target); k < all.length - 1 ? all[k+1].focus() : save(); });
+    } else view.insAt = null;
+  }
+  app.querySelectorAll("[data-chk]").forEach(c => c.onchange = () => { c.checked ? view.chk.add(c.dataset.chk) : view.chk.delete(c.dataset.chk); view.chkDel = false; render(); });
+  app.querySelectorAll("[data-chkgrp]").forEach(c => c.onchange = () => {
+    d.cards.filter(x => (subOf(d,x) ? x.sub : "") === c.dataset.chkgrp).forEach(x => c.checked ? view.chk.add(x.id) : view.chk.delete(x.id)); view.chkDel = false; render(); });
+  const mvTo = document.getElementById("mvTo");
+  if(mvTo){
+    mvTo.onchange = () => { view.mvTo = mvTo.value; render(); if(view.mvTo === "__new") document.getElementById("mvNew").focus(); };
+    document.getElementById("chkNone").onclick = () => { view.chk.clear(); view.chkDel = false; render(); };
+    const cd = document.getElementById("chkDel"); if(cd) cd.onclick = () => { view.chkDel = true; render(); };
+    const cy = document.getElementById("chkDelYes"); if(cy) cy.onclick = () => { const n = view.chk.size; d.cards = d.cards.filter(c => !view.chk.has(c.id)); view.chk.clear(); view.chkDel = false; persist(d); view.msg = `${n} Wörter gelöscht`; render(); };
+    const go = () => {
+      let target = mvTo.value, label;
+      if(target === "__new"){
+        const n = document.getElementById("mvNew").value.trim(); if(!n) return document.getElementById("mvNew").focus();
+        const ex = d.subs.find(x => same(x.name, n));
+        if(ex) target = ex.id; else { const s2 = { id:uidGen(), name:n, own:false, settings:{} }; d.subs.push(s2); target = s2.id; }
+        label = n;
+      } else label = target ? d.subs.find(x => x.id === target).name : "Ohne Unterkapitel";
+      let n = 0; d.cards.forEach(c => { if(view.chk.has(c.id)){ c.sub = target; n++; } });
+      sel.add(d.id + "|" + target);
+      view.chk.clear(); view.mvTo = target; persist(d); view.msg = `${n} Wörter nach „${label}“ verschoben`; render();
+    };
+    document.getElementById("mvGo").onclick = go;
+    const mn = document.getElementById("mvNew"); if(mn) mn.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); go(); } };
+  }
+  const mv = document.getElementById("moveArt");
+  if(mv) mv.onclick = () => { let n = 0;
+    d.cards.forEach(c => {
+      if(!c.aa){ const [x,y] = splitArt(c.a, d.from, true); if(x && !c.a.includes(";")){ c.aa = x; c.a = y; n++; } }
+      if(!c.ba){ const [x,y] = splitArt(c.b, d.to, true); if(x && !c.b.includes(";")){ c.ba = x; c.b = y; n++; } }
+    });
+    persist(d); view.msg = `${n} Artikel verschoben`; render(); };
+  if(tab==="list" && view.editId){
+    const row = document.getElementById("editRow");
+    wireDraft(row, () => view.editDraft);
+    document.getElementById("saveEdit").onclick = () => {
+      const c = d.cards.find(x => x.id === view.editId);
+      const r = view.editDraft;
+      if(!r.a.trim() || !r.b.trim()) return setStatus("Beide Seiten brauchen ein Wort");
+      const n = newCard(r, document.getElementById("editSub")?.value ?? c.sub);
+      Object.assign(c, { aa:n.aa, a:n.a, av:[], ba:n.ba, b:n.b, bv:[], aa2:n.aa2, a2:n.a2, ba2:n.ba2, b2:n.b2, sub:n.sub });
+      view.editId = null; view.editDraft = null; persist(d); view.msg = "Gespeichert"; render();
+    };
+    document.getElementById("cancelEdit").onclick = () => { view.editId = null; view.editDraft = null; render(); };
+    row.addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); document.getElementById("saveEdit").click(); } });
+  }
+  if(tab==="add"){
+    const rows = document.getElementById("rows");
+    const ss = document.getElementById("addSub2"); if(ss) ss.onchange = () => view.addSub = ss.value;
+    wireDraft(rows, i => view.rows[i]);
+    rows.querySelectorAll("[data-insrow]").forEach(b => b.onclick = () => { const i = +b.dataset.insrow; view.rows.splice(i, 0, blankRows(1)[0]); render();
+      document.querySelector(`#rows [data-row="${i}"] [data-f="aa"]`)?.focus(); });
+    rows.addEventListener("keydown", e => {
+      if(e.key !== "Enter") return; e.preventDefault();
+      const all = [...rows.querySelectorAll("input")]; const k = all.indexOf(e.target);
+      if(k < all.length - 1) all[k+1].focus();
+      else { view.rows.push(...blankRows(5)); render(); const n = document.querySelectorAll("#rows input"); n[k+1]?.focus(); }
+    });
+    rows.querySelectorAll("[data-rmrow]").forEach(b => b.onclick = () => { view.rows.splice(+b.dataset.rmrow, 1); if(!view.rows.length) view.rows = blankRows(1); render(); });
+    document.getElementById("moreRows").onclick = () => { view.rows.push(...blankRows(5)); render(); };
+    document.getElementById("addAll").onclick = () => {
+      const full = view.rows.filter(r => r.a.trim() && r.b.trim());
+      const half = view.rows.filter(r => !!(r.a.trim()) !== !!(r.b.trim()));
+      if(!full.length) return setStatus(half.length ? "In einer Zeile fehlt noch eine Seite" : "Trag zuerst Wörter ein");
+      full.forEach(r => d.cards.push(newCard(r, view.addSub)));
+      if(view.addSub) sel.add(d.id + "|" + view.addSub); else sel.add(d.id + "|");
+      view.rows = [...half, ...blankRows(Math.max(1, 5 - half.length))];
+      persist(d); view.msg = `${full.length} Wörter hinzugefügt` + (half.length ? ` – ${half.length} unvollständige Zeile(n) stehen noch da` : ""); render();
+      document.querySelector("#rows input")?.focus();
+    };
+    if(!view.editTitle) rows.querySelector('[data-f="aa"]')?.focus();
+  }
+  if(tab==="bulk"){
+    const bs = document.getElementById("bulkSub"); if(bs) bs.onchange = () => view.addSub = bs.value;
+    document.getElementById("addBulk").onclick = () => {
+      const on = document.getElementById("autoArt").checked; let n = 0;
+      document.getElementById("bulk").value.split("\n").forEach(line => {
+        const m = line.split(/\t| - | – |=/);
+        if(m.length < 2) return;
+        const L = m[0].split(" / "), R = m.slice(1).join(" ").split(" / ");
+        const [aa, a] = splitArt(L[0], d.from, on), [ba, b] = splitArt(R[0], d.to, on);
+        const [aa2, a2] = L[1] ? splitArt(L[1], d.from, on) : ["", ""], [ba2, b2] = R[1] ? splitArt(R[1], d.to, on) : ["", ""];
+        if(a && b){ d.cards.push(newCard({ aa, a, ba, b, aa2, a2, ba2, b2, pair: !!(a2 || b2) }, view.addSub)); n++; }
+      });
+      if(n){ if(view.addSub) sel.add(d.id + "|" + view.addSub); else sel.add(d.id + "|");
+        persist(d); view.tab = "list"; view.msg = `${n} Wörter hinzugefügt`; render(); }
+      else setStatus("Keine Wortpaare erkannt – nutze z. B. „der Hund - le chien“");
+    };
+  }
+}
+
+/* ---------- Konjugation / Deklination ---------- */
+function newConjDraft(d, t){
+  if(t) return { id:t.id, word:t.word, meaning:t.meaning, tense:t.tense, sub:subOf(d,t) ? t.sub : "", schema:"", rows:t.rows.map(r => ({ ...r })) };
+  const sid = view.lastSchema && allSchemas(d).some(s => s.id === view.lastSchema) ? view.lastSchema : defaultPreset(d);
+  const sc = allSchemas(d).find(s => s.id === sid);
+  return { id:null, word:"", meaning:"", tense:view.lastTense||"", sub:view.addSub||"", schema:sid, rows:sc.labels.map(p => ({ p, f:"" })) };
+}
+function conjTabHtml(d){
+  const E = view.conjEdit;
+  if(E) return `
+    <div class="row" style="margin-bottom:10px">
+      <div><label for="cWord">Wort (z. B. Infinitiv)</label><input id="cWord" data-c="word" value="${esc(E.word)}" placeholder="être"></div>
+      <div><label for="cMean">Bedeutung</label><input id="cMean" data-c="meaning" value="${esc(E.meaning)}" placeholder="sein"></div>
+      <div><label for="cTense">Zeit / Art</label><input id="cTense" data-c="tense" value="${esc(E.tense)}" placeholder="Präsens"></div>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <div><label for="cSchema">Vorlage (Personen / Fälle)</label><select id="cSchema"><option value="">– Vorlage wählen –</option>
+        ${d.schemas.length ? `<optgroup label="Eigene Vorlagen">${d.schemas.map(s => `<option value="${s.id}" ${E.schema===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</optgroup>` : ""}
+        <optgroup label="Standard">${PRESETS.map(s => `<option value="${s.id}" ${E.schema===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}</optgroup></select></div>
+      ${subSelect(d, "cSub", E.sub)}
+    </div>
+    <div class="conjgrid" id="cRows">
+      <span class="small">Person / Fall</span><span class="small">Form</span><span></span>
+      ${E.rows.map((r,i) => (i ? `<button class="ins" data-cins="${i}" aria-label="Zeile hier einfügen">+ Zeile hier einfügen</button>` : "") + `<input data-ri="${i}" data-rf="p" value="${esc(r.p)}" placeholder="z. B. je" aria-label="Person ${i+1}">
+        <input data-ri="${i}" data-rf="f" value="${esc(r.f)}" placeholder="Form" aria-label="Form ${i+1}" autocomplete="off">
+        <button class="icon" data-crm="${i}" aria-label="Zeile entfernen">✕</button>`).join("")}
+    </div>
+    <div class="row" style="margin-top:8px"><button class="ghost" id="cAddRow">+ Zeile</button><button class="ghost" id="cSaveSchema">Personen als eigene Vorlage speichern</button></div>
+    <p class="small" style="margin:8px 0 0">Die linken Felder kannst du frei ändern – z. B. für Sprachen ohne ich/du/er oder für Fälle. Varianten mit „;“ und Klammern funktionieren wie bei den Wörtern.</p>
+    <div class="row" style="margin-top:12px"><button id="cSave">Tabelle speichern</button><button class="ghost" id="cCancel">Abbrechen</button></div>
+    ${d.schemas.length ? `<details style="margin-top:14px"><summary class="small" style="cursor:pointer">Eigene Vorlagen verwalten</summary>
+      <div class="sublist" style="margin-top:8px">${d.schemas.map(s => `<div class="sr"><input data-schname="${s.id}" value="${esc(s.name)}"><button class="icon" data-schdel="${s.id}" aria-label="Vorlage löschen">✕</button></div>`).join("")}</div></details>` : ""}`;
+  const groups = [{ id:"", name:"Ohne Unterkapitel" }, ...d.subs];
+  const item = t => `<div class="citem"><div class="hd"><span><span class="w">${esc(t.word)}</span> <span class="small">${esc([t.meaning, t.tense].filter(Boolean).join(" · "))} · Fach ${(t.box||0)+1}</span></span>
+      <span><button class="icon" data-cedit="${t.id}" aria-label="Bearbeiten">✎</button><button class="icon" data-cdel="${t.id}" aria-label="Löschen">✕</button></span></div>
+      <table class="ctable">${t.rows.map(r => `<tr><td>${esc(r.p)}</td><td>${esc(r.f)}</td></tr>`).join("")}</table></div>`;
+  return `<div class="row" style="margin-bottom:12px"><button id="cNew">+ Neue Tabelle</button>${d.conj.length ? `<button class="ghost" id="cStudy">Diese Tabellen abfragen</button>` : ""}</div>
+    ${!d.conj.length ? `<div class="empty">Noch keine Tabellen. Leg z. B. „être – Präsens“ an.</div>` :
+      groups.map(g => { const ts = d.conj.filter(t => (subOf(d,t) ? t.sub : "") === g.id); if(!ts.length) return "";
+        return `${d.subs.length ? `<div class="subhead">${esc(g.name)}</div>` : ""}${ts.map(item).join("")}`; }).join("")}`;
+}
+function wireConjTab(d, sel){
+  const E = view.conjEdit;
+  if(!E){
+    document.getElementById("cNew").onclick = () => { view.conjEdit = newConjDraft(d); render(); document.getElementById("cWord").focus(); };
+    const cs = document.getElementById("cStudy"); if(cs) cs.onclick = () => startStudy([...sel], "conj", "ab", document.getElementById("which").value);
+    app.querySelectorAll("[data-cedit]").forEach(b => b.onclick = () => { view.conjEdit = newConjDraft(d, d.conj.find(t => t.id === b.dataset.cedit)); render(); });
+    app.querySelectorAll("[data-cdel]").forEach(b => b.onclick = () => { d.conj = d.conj.filter(t => t.id !== b.dataset.cdel); persist(d); render(); });
+    return;
+  }
+  app.querySelectorAll("[data-c]").forEach(i => i.oninput = () => E[i.dataset.c] = i.value);
+  const rows = document.getElementById("cRows");
+  rows.addEventListener("input", e => { const i = e.target.dataset.ri; if(i != null) E.rows[+i][e.target.dataset.rf] = e.target.value; });
+  rows.addEventListener("keydown", e => {
+    if(e.key !== "Enter") return; e.preventDefault();
+    const all = [...rows.querySelectorAll('[data-rf="f"]')]; const k = all.indexOf(e.target);
+    if(k > -1 && k < all.length - 1) all[k+1].focus(); else document.getElementById("cSave").click();
+  });
+  const sc = document.getElementById("cSchema");
+  sc.onchange = () => { const s = allSchemas(d).find(x => x.id === sc.value); if(!s) return;
+    const old = E.rows; E.schema = s.id; view.lastSchema = s.id;
+    E.rows = s.labels.map((p,i) => ({ p, f: old[i] ? old[i].f : "" })); render(); };
+  const cs = document.getElementById("cSub"); if(cs) cs.onchange = () => E.sub = cs.value;
+  rows.querySelectorAll("[data-crm]").forEach(b => b.onclick = () => { E.rows.splice(+b.dataset.crm, 1); render(); });
+  rows.querySelectorAll("[data-cins]").forEach(b => b.onclick = () => { const i = +b.dataset.cins; E.rows.splice(i, 0, { p:"", f:"" }); render();
+    document.querySelectorAll('#cRows [data-rf="p"]')[i]?.focus(); });
+  document.getElementById("cAddRow").onclick = () => { E.rows.push({ p:"", f:"" }); render(); rows.ownerDocument.querySelectorAll('#cRows [data-rf="p"]')[E.rows.length-1]?.focus(); };
+  document.getElementById("cSaveSchema").onclick = () => {
+    const labels = E.rows.map(r => r.p.trim()); if(!labels.some(Boolean)) return setStatus("Trag zuerst Personen oder Fälle ein");
+    const s = { id:uidGen(), name: labels.filter(Boolean).slice(0,3).join(", ") + (labels.length > 3 ? " …" : ""), labels };
+    d.schemas.push(s); E.schema = s.id; view.lastSchema = s.id; persist(d); view.msg = "Vorlage gespeichert – den Namen kannst du unten ändern"; render(); };
+  app.querySelectorAll("[data-schname]").forEach(i => i.onchange = () => { const s = d.schemas.find(x => x.id === i.dataset.schname); s.name = i.value.trim() || s.name; persist(d); });
+  app.querySelectorAll("[data-schdel]").forEach(b => b.onclick = () => { d.schemas = d.schemas.filter(s => s.id !== b.dataset.schdel); if(E.schema === b.dataset.schdel) E.schema = ""; persist(d); render(); });
+  document.getElementById("cCancel").onclick = () => { view.conjEdit = null; render(); };
+  document.getElementById("cSave").onclick = () => {
+    const word = E.word.trim(); const rws = E.rows.map(r => ({ p:r.p.trim(), f:r.f.trim() })).filter(r => r.f);
+    if(!word) { setStatus("Gib das Wort ein, z. B. „être“"); return document.getElementById("cWord").focus(); }
+    if(!rws.length) return setStatus("Trag mindestens eine Form ein");
+    const data = { word, meaning:E.meaning.trim(), tense:E.tense.trim(), sub:E.sub||"", rows:rws };
+    if(E.id){ Object.assign(d.conj.find(t => t.id === E.id), data); }
+    else { d.conj.push({ id:uidGen(), ...data, box:0, due:0, right:0, wrong:0 }); sel.add(d.id + "|" + (data.sub||"")); }
+    view.lastTense = data.tense; view.addSub = data.sub;
+    view.conjEdit = null; persist(d); view.msg = `„${word}“ gespeichert`; render();
+  };
+}
+function renderConjStudy(){
+  const q = view.queue[view.i];
+  const d = deckOf(q.d), t = d && d.conj.find(x => x.id === q.id);
+  if(!t) return next();
+  const st = settingsFor(d, t);
+  const sub = subOf(d, t);
+  const where = view.keys.length > 1 ? esc(d.name) + (sub ? " › " + esc(sub.name) : "") : (sub ? esc(sub.name) : "");
+  const R = view.rowRes;
+  app.innerHTML = `
+    <div class="top"><button class="ghost" id="quit">Beenden</button><span class="meta">${view.right} richtig · ${view.wrong} falsch</span></div>
+    <div class="progress"><i style="width:${view.i / view.total * 100}%"></i></div>
+    <div class="meta"><span>Tabelle ${view.i+1} von ${view.total}${where ? " · " + where : ""}</span><span>Fach ${(t.box||0)+1}</span></div>
+    <div class="stage static"><div class="face" style="min-height:170px"><span class="lang">${esc(t.tense || "Formen")}</span><span class="word">${esc(t.word)}</span>${t.meaning ? `<span class="also">${esc(t.meaning)}</span>` : ""}</div></div>
+    <div class="conjq" id="cq">${t.rows.map((r,i) => `<span class="lbl">${esc(r.p)}</span>
+      <input data-qi="${i}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" class="${R ? (R[i].ok ? "ok" : "bad") : ""}" ${R ? "disabled" : ""} value="${esc(view.typedRows[i]||"")}" aria-label="${esc(r.p || "Form " + (i+1))}">
+      ${R ? `<span class="sol ${R[i].ok ? "ok" : ""}">${R[i].ok ? "✓" + (R[i].typo ? " (Tippfehler)" : "") : esc(R[i].msg) + " Richtig: " + esc(r.f)}</span>` : ""}`).join("")}</div>
+    <div class="feedback ${view.fbClass||""}" aria-live="polite">${view.fb||""}</div>
+    <div class="row"><button id="go" style="flex:1;padding:14px">${R ? "Weiter" : "Prüfen"}</button>
+      ${R && view.fbClass === "bad" ? `<button class="ghost" id="override">Ich hatte recht</button>` : ""}</div>`;
+  document.getElementById("quit").onclick = () => finish(view.i);
+  const ins = [...app.querySelectorAll("[data-qi]")];
+  ins.forEach(i => i.oninput = () => view.typedRows[+i.dataset.qi] = i.value);
+  const go = document.getElementById("go");
+  const doCheck = () => {
+    if(view.rowRes) return next();
+    const res = t.rows.map((r,i) => {
+      const c = check(view.typedRows[i]||"", solutionsFor(r.f, [], "", st), st);
+      const ok = c.r === "right" || c.r === "typo";
+      const msg = c.r === "detail" ? `Achte auf ${c.why.join(" und ")}.` : c.r === "almost" ? "Fast." : "";
+      return { ok, typo:c.r === "typo", msg };
+    });
+    const n = res.filter(x => x.ok).length, all = n === res.length;
+    view.rowRes = res; view.fb = all ? `Alles richtig! ${n} von ${res.length} Formen` : `${n} von ${res.length} Formen richtig`; view.fbClass = all ? "ok" : "bad";
+    grade(t, all); all ? view.right++ : (view.wrong++, view.wrongList.push(q)); persist(d);
+    render(); document.getElementById("go").focus();
+  };
+  go.onclick = doCheck;
+  if(!R){
+    ins[0]?.focus();
+    ins.forEach((inp,k) => inp.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); k < ins.length - 1 ? ins[k+1].focus() : doCheck(); } });
+  }
+  const ov = document.getElementById("override");
+  if(ov) ov.onclick = () => { t.box = 0; grade(t, true); t.wrong = Math.max(0,(t.wrong||1)-1); view.wrong--; view.right++; view.wrongList.pop(); persist(d); next(); };
+}
+
+function startStudy(keys, mode, dir, which){
+  const ks = new Set(keys);
+  if(mode === "conj"){
+    const tp = decks.flatMap(d => d.conj.filter(t => ks.has(keyOf(d,t))).map(t => ({ d:d.id, t })))
+      .filter(({t}) => which === "all" ? true : which === "hard" ? (t.box||0) === 0 : isDue(t));
+    if(!tp.length){ setStatus(which==="due" ? "Keine Tabelle fällig – wähle „Alle“" : "Keine passenden Tabellen"); return; }
+    const queue = shuffle(tp).map(({d,t}) => ({ d, id:t.id, conj:true }));
+    view = { name:"study", keys, mode, queue, i:0, right:0, wrong:0, total:queue.length, state:"ask", wrongList:[], from:view, typedRows:{} };
+    return render();
+  }
+  const pool = decks.flatMap(d => d.cards.filter(c => ks.has(keyOf(d,c))).map(c => ({ d:d.id, c })))
+    .filter(({c}) => which === "all" ? true : which === "hard" ? (c.box||0) === 0 : isDue(c));
+  if(!pool.length){ setStatus(which==="due" ? "Nichts fällig – wähle „Alle“, um trotzdem zu üben" : "Keine passenden Wörter"); return; }
+  if(mode === "choice" && cardsIn(ks).length < 2){ setStatus("Für die Auswahl brauchst du mehr Wörter"); return; }
+  const queue = shuffle(pool).map(({d,c}) => ({ d, id:c.id, flip: dir==="ba" || (dir==="mix" && Math.random() < .5) }));
+  view = { name:"study", keys, mode, queue, i:0, right:0, wrong:0, total:queue.length, state:"ask", wrongList:[], from:view };
+  render();
+}
+function sides(d, card, flip){
+  const S = flip
+    ? { fa:card.ba, fw:card.b, fv:card.bv, fa2:card.ba2, fw2:card.b2, ba:card.aa, bw:card.a, bv:card.av, ba2:card.aa2, bw2:card.a2, fl:d.to, bl:d.from }
+    : { fa:card.aa, fw:card.a, fv:card.av, fa2:card.aa2, fw2:card.a2, ba:card.ba, bw:card.b, bv:card.bv, ba2:card.ba2, bw2:card.b2, fl:d.from, bl:d.to };
+  S.fD = pdisp(S.fa, S.fw, S.fa2, S.fw2); S.bD = pdisp(S.ba, S.bw, S.ba2, S.bw2);
+  return S;
+}
+function renderStudy(){
+  if(view.mode === "conj") return renderConjStudy();
+  const q = view.queue[view.i];
+  const d = deckOf(q.d), card = d && d.cards.find(c => c.id === q.id);
+  if(!card) return next();
+  const S = sides(d, card, q.flip);
+  const st = settingsFor(d, card);
+  const sol = solutionsCard(S.bw, S.bv, S.ba, S.bw2, S.ba2, st);
+  const backText = S.bD + (S.bv.length ? " · " + S.bv.join(" · ") : "");
+  const sub = subOf(d, card);
+  const where = view.keys.length > 1 ? esc(d.name) + (sub ? " › " + esc(sub.name) : "") : (sub ? esc(sub.name) : "");
+  const pct = view.i / view.total * 100;
+  const head = `
+    <div class="top"><button class="ghost" id="quit">Beenden</button><span class="meta">${view.right} richtig · ${view.wrong} falsch</span></div>
+    <div class="progress"><i style="width:${pct}%"></i></div>
+    <div class="meta"><span>Karte ${view.i+1} von ${view.total}${where ? " · " + where : ""}</span><span>Fach ${(card.box||0)+1}</span></div>`;
+  const frontHtml = `<span class="word">${esc(S.fD)}</span>${S.fv.length ? `<span class="also">auch: ${S.fv.map(esc).join(", ")}</span>` : ""}`;
+  let body = "";
+  if(view.mode === "flash"){
+    body = `<div class="stage"><div class="card ${view.state==="shown"?"flipped":""}" id="card" role="button" tabindex="0" aria-label="Karte umdrehen">
+        <div class="face"><span class="lang">${esc(S.fl)}</span>${frontHtml}<span class="hint">Tippen oder Leertaste zum Umdrehen</span></div>
+        <div class="face back"><span class="lang">${esc(S.bl)}</span><span class="word">${esc(S.bD)}</span>${S.bv.length ? `<span class="also">auch: ${S.bv.map(esc).join(", ")}</span>` : ""}</div>
+      </div></div>
+      ${view.state==="shown" ? `<div class="answerbtns"><button class="no" id="no">Wusste ich nicht</button><button class="yes" id="yes">Wusste ich</button></div>`
+        : `<button style="width:100%;padding:14px" id="flip">Umdrehen</button>`}`;
+  } else if(view.mode === "write"){
+    const needArt = S.ba && st.article;
+    body = `<div class="stage static"><div class="face"><span class="lang">${esc(S.fl)} → ${esc(S.bl)}</span>${frontHtml}</div></div>
+      <div class="row"><div><label for="ans">Deine Antwort (${esc(S.bl)}${needArt ? ", mit Artikel" : ""}${S.bw2 ? " – eins von beiden reicht" : ""})</label><input id="ans" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" ${view.state!=="ask"?"disabled":""} value="${esc(view.typed||"")}"></div>
+      <button id="go">${view.state==="ask" ? "Prüfen" : "Weiter"}</button></div>
+      <div class="feedback ${view.fbClass||""}" aria-live="polite">${view.fb||""}</div>
+      ${view.state==="checked" && view.fbClass==="bad" ? `<button class="ghost" id="override">Ich hatte recht</button>` : ""}`;
+  } else {
+    if(!view.opts){
+      const right = S.bD;
+      const others = [...new Set(decks.flatMap(x => x.cards.filter(c => view.keys.includes(keyOf(x,c)) && c.id !== card.id)
+        .map(c => { const T = sides(x, c, q.flip); return T.bD; })))].filter(o => o !== right);
+      view.opts = shuffle([right, ...shuffle(others).slice(0,3)]);
+    }
+    const right = S.bD;
+    body = `<div class="stage static"><div class="face"><span class="lang">${esc(S.fl)} → ${esc(S.bl)}</span>${frontHtml}</div></div>
+      <div class="choices">${view.opts.map((o,k) => {
+        let cls = ""; if(view.state==="checked"){ if(o===right) cls="right"; else if(k===view.picked) cls="wrong"; }
+        return `<button data-opt="${k}" class="${cls}" ${view.state==="checked"?"disabled":""}>${k+1}. ${esc(o)}</button>`; }).join("")}</div>
+      <div class="feedback ${view.fbClass||""}" aria-live="polite">${view.fb||""}</div>
+      ${view.state==="checked" ? `<button style="width:100%;padding:14px" id="go">Weiter</button>` : ""}`;
+  }
+  app.innerHTML = head + body;
+  document.getElementById("quit").onclick = () => finish(view.i);
+  const answer = ok => { grade(card, ok); ok ? view.right++ : (view.wrong++, view.wrongList.push(q)); persist(d); };
+
+  if(view.mode === "flash"){
+    const flip = () => { if(view.state==="ask"){ view.state="shown"; render(); } };
+    document.getElementById("card").onclick = flip;
+    const fb = document.getElementById("flip"); if(fb){ fb.onclick = flip; fb.focus(); }
+    const y = document.getElementById("yes"), n = document.getElementById("no");
+    if(y){ y.onclick = () => { answer(true); next(); }; n.onclick = () => { answer(false); next(); }; y.focus(); }
+  } else if(view.mode === "write"){
+    const inp = document.getElementById("ans"), go = document.getElementById("go");
+    const doCheck = () => {
+      if(view.state !== "ask") return next();
+      const res = check(inp.value, sol, st); view.typed = inp.value;
+      const R = `Richtig: ${esc(backText)}`;
+      if(res.r==="right"){ view.fb = "Richtig!" + (S.bv.length || S.bw2 || /[;()]/.test(S.bw) ? ` <span class="small">(${esc(backText)})</span>` : ""); view.fbClass = "ok"; answer(true); }
+      else if(res.r==="typo"){ view.fb = `Fast – kleiner Tippfehler. ${R}`; view.fbClass = "ok"; answer(true); }
+      else if(res.r==="article"){ view.fb = `Der Artikel fehlt. ${R}`; view.fbClass = "bad"; answer(false); }
+      else if(res.r==="detail"){ view.fb = `Achte auf ${res.why.join(" und ")}. ${R}`; view.fbClass = "bad"; answer(false); }
+      else if(res.r==="almost"){ view.fb = `Fast – ein Buchstabe stimmt nicht. ${R}`; view.fbClass = "bad"; answer(false); }
+      else { view.fb = `Leider falsch. ${R}`; view.fbClass = "bad"; answer(false); }
+      view.state = "checked"; render(); document.getElementById("go").focus();
+    };
+    go.onclick = doCheck;
+    if(view.state==="ask"){ inp.focus(); inp.onkeydown = e => { if(e.key==="Enter"){ e.preventDefault(); doCheck(); } }; }
+    const ov = document.getElementById("override");
+    if(ov) ov.onclick = () => { card.box = 0; grade(card, true); card.wrong = Math.max(0,(card.wrong||1)-1);
+      view.wrong--; view.right++; view.wrongList.pop(); persist(d); next(); };
+  } else {
+    const right = S.bD;
+    app.querySelectorAll("[data-opt]").forEach(b => b.onclick = () => {
+      const k = +b.dataset.opt; view.picked = k; const ok = view.opts[k] === right;
+      view.fb = ok ? "Richtig!" : `Falsch. Richtig: ${esc(right)}`; view.fbClass = ok ? "ok" : "bad";
+      answer(ok); view.state = "checked"; render(); document.getElementById("go").focus();
+    });
+    const go = document.getElementById("go"); if(go) go.onclick = next;
+  }
+}
+function next(){
+  Object.assign(view, { state:"ask", fb:"", fbClass:"", typed:"", opts:null, picked:null, typedRows:{}, rowRes:null });
+  view.i++;
+  if(view.i >= view.total) return finish(view.total);
+  render();
+}
+function finish(total){
+  view = { name:"done", keys:view.keys, right:view.right, wrong:view.wrong, total, wrongList:view.wrongList, mode:view.mode, from:view.from };
+  render();
+}
+function renderDone(){
+  const pct = view.total ? Math.round(view.right / view.total * 100) : 0;
+  const seen = new Set();
+  const wrong = view.wrongList.filter(q => !seen.has(q.id) && seen.add(q.id))
+    .map(q => { const d = deckOf(q.d); const c = d && (q.conj ? d.conj : d.cards).find(x => x.id === q.id); return c ? { q, c, d } : null; }).filter(Boolean);
+  const deckIds = [...new Set(view.keys.map(k => k.split("|")[0]))];
+  const multi = deckIds.length > 1;
+  app.innerHTML = `
+    <h2>Runde geschafft</h2>
+    <p class="sub">${esc(deckIds.map(deckOf).filter(Boolean).map(d => d.name).join(", "))}</p>
+    <div class="panel" style="text-align:center">
+      <div class="big">${pct}%</div>
+      <p style="margin:6px 0 0;color:var(--muted)">${view.right} richtig, ${view.wrong} falsch von ${view.total} Karten</p>
+    </div>
+    ${wrong.length ? `<div class="panel"><h2 style="font-size:1.15rem">Nochmal anschauen</h2><ul class="words">${wrong.map(({q,c,d}) => q.conj
+      ? `<li><span class="w">${esc(c.word)}${c.tense ? `<span class="alt">${esc(c.tense)}</span>` : ""}</span><span><table class="ctable">${c.rows.map(r => `<tr><td>${esc(r.p)}</td><td>${esc(r.f)}</td></tr>`).join("")}</table></span><span class="chap">${multi ? esc(d.name) : ""}</span></li>`
+      : `<li><span class="w">${esc(pdisp(c.aa, c.a, c.aa2, c.a2))}</span><span class="w">${esc(pdisp(c.ba, c.b, c.ba2, c.b2))}</span><span class="chap">${multi ? esc(d.name) : ""}</span></li>`).join("")}</ul></div>` : ""}
+    <div class="row">
+      ${wrong.length ? `<button id="again">Falsche wiederholen</button>` : ""}
+      <button class="ghost" id="toBack">Zurück</button>
+    </div>`;
+  document.getElementById("toBack").onclick = () => { const f = view.from || { name:"home" }; view = { ...f, msg:"" }; render(); };
+  const ag = document.getElementById("again");
+  if(ag) ag.onclick = () => {
+    const queue = shuffle(wrong.map(w => w.q));
+    view = { name:"study", keys:view.keys, mode:view.mode, queue, i:0, right:0, wrong:0, total:queue.length, state:"ask", wrongList:[], from:view.from, typedRows:{} }; render();
+  };
+}
+
+document.addEventListener("keydown", e => {
+  if(view.name !== "study" || view.mode !== "flash") return;
+  if(e.target.tagName === "INPUT") return;
+  if(e.code === "Space" && view.state === "ask"){ e.preventDefault(); view.state = "shown"; render(); }
+  else if(view.state === "shown" && (e.key === "1" || e.key === "ArrowLeft")) document.getElementById("no")?.click();
+  else if(view.state === "shown" && (e.key === "2" || e.key === "ArrowRight")) document.getElementById("yes")?.click();
+});
+document.addEventListener("keydown", e => {
+  if(view.name === "study" && view.mode === "choice" && view.state === "ask" && /^[1-4]$/.test(e.key)) document.querySelector(`[data-opt="${+e.key-1}"]`)?.click();
+});
+
+try{ legacy = JSON.parse(localStorage.getItem(SET_KEY) || "{}"); }catch(e){}
+decks = loadLocal();
+try{ const emb = JSON.parse(document.getElementById("embedded-decks").textContent || "null");
+  if(emb && emb.sb && emb.sb.url && emb.sb.key && !sbCfg){ sbCfg = { url:emb.sb.url, key:emb.sb.key }; writeJSON(SB_KEY, sbCfg); } }catch(e){}
+loadEmbedded();
+render();
+if(!inClaude()) sbInit();
+if(window.claude && typeof window.claude.use === "function") initCloud();
+})();
+</script>
+</body>
+</html>
