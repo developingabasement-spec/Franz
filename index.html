@@ -828,6 +828,7 @@ function sbRefresh(){
   if(view.name !== "home"){ return; }
   const el = document.getElementById("sbPanel");
   if(el){ el.outerHTML = sbPanelHtml(); wireSb(); setStatus(baseStatus()); }
+  if(typeof clsRefresh === "function") clsRefresh();
 }
 function wireSb(){
   const $ = id => document.getElementById(id);
