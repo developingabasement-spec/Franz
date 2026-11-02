@@ -692,7 +692,8 @@ async function clsInit(){
 }
 function clsPanelHtml(){
   if(inClaude()) return "";
-  const msg = clsMsg ? `<p class="small" style="color:var(--bad,#e66)">${esc(clsMsg)}</p>` : "";
+  const okm = /^✓/.test(clsMsg);
+  const msg = clsMsg ? `<p style="margin:8px 0;padding:9px 12px;border-radius:10px;font-weight:600;border:1px solid ${okm?"#4c9":"#e66"};background:${okm?"rgba(70,200,150,.15)":"rgba(230,90,90,.15)"}">${esc(clsMsg)}</p>` : "";
   let b;
   if(!sbUser) b = `<p class="small">Melde dich oben bei Supabase an, dann kannst du einer Klasse beitreten.</p>`;
   else if(!cls) b = `<div class="row"><div><label for="clsName">Klasse</label><input id="clsName" placeholder="7D" autocomplete="off"></div><div><label for="clsPw">Lehrer-Passwort (nur für Lehrer)</label><input id="clsPw" type="password" autocomplete="off"></div></div>
@@ -711,8 +712,9 @@ function clsPanelHtml(){
 }
 function clsRefresh(){ const el = document.getElementById("clsPanel"); if(el) el.outerHTML = clsPanelHtml(); applyRo(); }
 const v = id => (document.getElementById(id) || {}).value || "";
-async function clsEnter(r){ if(r.error){ clsMsg = r.error.message.replace(/^.*?:\s*/, ""); return clsRefresh(); }
-  cls = r.data; mode = cls.role; clsMsg = ""; writeJSON(CLS_KEY, cls); writeJSON(MODE_KEY, mode); applyRo(); clsRefresh(); sbBusy = false; sbStart(); }
+const clsNice = m => /gibt es nicht/.test(m) ? "Diese Klasse gibt es noch nicht. Erstelle sie zuerst unter „Neue Klasse erstellen“." : /Passwort falsch/.test(m) ? "Falsches Lehrer-Passwort." : /gibt es schon/.test(m) ? "Diese Klasse gibt es schon – nimm einen anderen Namen oder tritt ihr bei." : m;
+async function clsEnter(r){ if(r.error){ clsMsg = clsNice(r.error.message || String(r.error)); setStatus(clsMsg); return clsRefresh(); }
+  cls = r.data; mode = cls.role; clsMsg = "✓ Beigetreten als " + RN[cls.role]; setStatus(clsMsg); writeJSON(CLS_KEY, cls); writeJSON(MODE_KEY, mode); applyRo(); clsRefresh(); sbBusy = false; sbStart(); }
 window.KK = {
   join: async role => { if(!v("clsName").trim()){ clsMsg = "Bitte den Klassennamen eingeben."; return clsRefresh(); }
     if(role === "teacher" && !v("clsPw")){ clsMsg = "Für Lehrer bitte das Lehrer-Passwort eingeben."; return clsRefresh(); }
@@ -721,7 +723,7 @@ window.KK = {
     clsEnter(await sb.rpc("create_class", { p_name:v("nName").trim(), p_teacher:v("nT") })); },
   pw: async () => { if(!v("cT")){ clsMsg = "Bitte ein neues Passwort eingeben."; return clsRefresh(); }
     const { error } = await sb.rpc("set_teacher_password", { p_class:cls.id, p_pw:v("cT") });
-    clsMsg = error ? error.message : "Lehrer-Passwort gespeichert."; clsRefresh(); },
+    clsMsg = error ? clsNice(error.message) : "✓ Lehrer-Passwort gespeichert."; clsRefresh(); },
   mode: m => { mode = m; writeJSON(MODE_KEY, mode); clsRefresh(); render(); },
   leave: () => { cls = null; mode = null; writeJSON(CLS_KEY, null); writeJSON(MODE_KEY, null); applyRo(); sbStop(); sbStart(); clsRefresh(); }
 };
