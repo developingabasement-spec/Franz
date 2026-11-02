@@ -250,6 +250,7 @@ details.panel[open]>summary{margin-bottom:12px}
 .sbdot.err{background:var(--bad)}
 .sbdot.busy{background:var(--hi)}
 .linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;font-weight:400;font-size:.85rem}
+body.ro [data-del],body.ro [data-edit],body.ro [data-ins],body.ro .insli,body.ro .movebar{display:none!important}
 </style>
 </head>
 <body>
@@ -604,7 +605,7 @@ let sbBusy = false;
 async function sbStart(){
   if(!sb || !sbUser || sbBusy) return;
   sbBusy = true; sbState = "syncing"; sbErr = ""; sbRefresh();
-  try{ await sbFullSync(); sbSubscribe(); sbState = "live"; try{ await gbSync(); gbSubscribe(); }catch(e){ setStatus("Globale Kapitel: " + gbErrMsg(e)); } }
+  try{ await sbFullSync(); sbSubscribe(); sbState = "live"; try{ await clsInit(); if(cls){ await gbSync(); gbSubscribe(); } }catch(e){ setStatus("Klasse: " + gbErrMsg(e)); } }
   catch(e){ sbState = "error"; sbErr = sbErrMsg(e); }
   sbBusy = false; sbRefresh();
 }
@@ -673,10 +674,57 @@ async function sbRemove(id){
   if(sb && sbUser){ const { error } = await sb.from("decks").delete().eq("id", id); if(!error) return; }
   sbDeleted.push(id); writeJSON(SB_DEL, sbDeleted);
 }
-/* ---------- Globale (für alle geteilte) Kapitel ---------- */
+/* ---------- Klassen (Rollen: Lehrer / Schreiber / Schüler) ---------- */
+const CLS_KEY = "karteikasten-cls-v1", MODE_KEY = "karteikasten-mode-v1", RANK = ["student","writer","teacher"], RN = { student:"Schüler", writer:"Schreiber", teacher:"Lehrer" };
+let cls = readJSON(CLS_KEY, null), mode = readJSON(MODE_KEY, null), clsMsg = "";
+const canEdit = () => !!cls && mode !== "student";
+function applyRo(){ document.body.classList.toggle("ro", !!cls && mode === "student"); }
+async function clsInit(){
+  if(!cls || !sb || !sbUser) { applyRo(); return; }
+  const { data, error } = await sb.from("class_members").select("role").eq("class_id", cls.id).maybeSingle(); if(error) throw error;
+  if(!data){ cls = null; writeJSON(CLS_KEY, null); applyRo(); return; }
+  cls.role = data.role; if(!mode || RANK.indexOf(mode) > RANK.indexOf(cls.role)) mode = cls.role;
+  writeJSON(CLS_KEY, cls); writeJSON(MODE_KEY, mode); applyRo();
+}
+function clsPanelHtml(){
+  if(inClaude()) return "";
+  const msg = clsMsg ? `<p class="small" style="color:var(--bad,#e66)">${esc(clsMsg)}</p>` : "";
+  let b;
+  if(!sbUser) b = `<p class="small">Melde dich oben bei Supabase an, dann kannst du einer Klasse beitreten.</p>`;
+  else if(!cls) b = `<div class="row"><div><label for="clsName">Klasse</label><input id="clsName" placeholder="7D" autocomplete="off"></div><div><label for="clsPw">Lehrer-Passwort (nur für Lehrer)</label><input id="clsPw" type="password" autocomplete="off"></div></div>
+    <div class="row" style="gap:8px;margin-top:10px"><button onclick="window.KK.join('student')">Als Schüler</button><button class="ghost" onclick="window.KK.join('writer')">Als Schreiber</button><button class="ghost" onclick="window.KK.join('teacher')">Als Lehrer</button></div>
+    <details style="margin-top:12px"><summary>Neue Klasse erstellen (Lehrer)</summary><div class="row" style="margin-top:8px">
+      <div><label for="nName">Klasse</label><input id="nName"></div><div><label for="nT">Lehrer-Passwort</label><input id="nT" type="password"></div></div>
+      <p style="margin:10px 0 0"><button onclick="window.KK.create()">Klasse erstellen</button></p></details>`;
+  else {
+    const av = RANK.slice(0, RANK.indexOf(cls.role) + 1).reverse();
+    b = `<p style="margin:6px 0"><b>Klasse ${esc(cls.name)}</b> – deine Rolle: <b>${RN[cls.role]}</b>, aktive Ansicht: <b>${RN[mode]}</b></p>
+      <div class="row" style="gap:8px">${av.map(r => `<button class="${r===mode?"":"ghost"}" onclick="window.KK.mode('${r}')">${r===cls.role && r==="teacher" && mode!=="teacher" ? "Lehrerrechte zurück" : RN[r]}</button>`).join("")}</div>
+      ${cls.role === "teacher" && mode === "teacher" ? `<details style="margin-top:12px"><summary>Lehrer-Passwort ändern</summary><div class="row" style="margin-top:8px"><div><label for="cT">Neues Lehrer-Passwort</label><input id="cT" type="password"></div></div><p style="margin:10px 0 0"><button onclick="window.KK.pw()">Speichern</button></p></details>` : ""}
+      <p style="margin:12px 0 0"><button class="linkbtn" onclick="window.KK.leave()">Klasse verlassen</button></p>`;
+  }
+  return `<div class="panel" id="clsPanel"><h2 style="font-size:1.15rem">Klasse</h2>${msg}${b}</div>`;
+}
+function clsRefresh(){ const el = document.getElementById("clsPanel"); if(el) el.outerHTML = clsPanelHtml(); applyRo(); }
+const v = id => (document.getElementById(id) || {}).value || "";
+async function clsEnter(r){ if(r.error){ clsMsg = r.error.message.replace(/^.*?:\s*/, ""); return clsRefresh(); }
+  cls = r.data; mode = cls.role; clsMsg = ""; writeJSON(CLS_KEY, cls); writeJSON(MODE_KEY, mode); applyRo(); clsRefresh(); sbBusy = false; sbStart(); }
+window.KK = {
+  join: async role => { if(!v("clsName").trim()){ clsMsg = "Bitte den Klassennamen eingeben."; return clsRefresh(); }
+    if(role === "teacher" && !v("clsPw")){ clsMsg = "Für Lehrer bitte das Lehrer-Passwort eingeben."; return clsRefresh(); }
+    clsEnter(await sb.rpc("join_class", { p_name:v("clsName").trim(), p_role:role, p_pw:v("clsPw") })); },
+  create: async () => { if(!v("nName").trim() || !v("nT")){ clsMsg = "Bitte Klassenname und Lehrer-Passwort ausfüllen."; return clsRefresh(); }
+    clsEnter(await sb.rpc("create_class", { p_name:v("nName").trim(), p_teacher:v("nT") })); },
+  pw: async () => { if(!v("cT")){ clsMsg = "Bitte ein neues Passwort eingeben."; return clsRefresh(); }
+    const { error } = await sb.rpc("set_teacher_password", { p_class:cls.id, p_pw:v("cT") });
+    clsMsg = error ? error.message : "Lehrer-Passwort gespeichert."; clsRefresh(); },
+  mode: m => { mode = m; writeJSON(MODE_KEY, mode); clsRefresh(); render(); },
+  leave: () => { cls = null; mode = null; writeJSON(CLS_KEY, null); writeJSON(MODE_KEY, null); applyRo(); sbStop(); sbStart(); clsRefresh(); }
+};
+/* ---------- Geteilte Klassen-Kapitel ---------- */
 const PROG = ["box","due","right","wrong"];
 const gbTimers = {};
-const gbErrMsg = e => { const m = String((e && e.message) || e || ""); return /global_decks|relation|schema cache|does not exist/i.test(m) ? "Tabelle „global_decks“ fehlt – bitte das SQL im Supabase SQL Editor ausführen." : sbErrMsg(e); };
+const gbErrMsg = e => { const m = String((e && e.message) || e || ""); return /class_decks|classes|relation|schema cache|does not exist|function/i.test(m) ? "Klassen-Tabellen fehlen – bitte das SQL im Supabase SQL Editor ausführen." : sbErrMsg(e); };
 const gbStrip = d => ({ id:d.id, name:d.name, from:d.from, to:d.to, settings:d.settings, subs:JSON.parse(JSON.stringify(d.subs)),
   cards:d.cards.map(c => { const x = { ...c }; PROG.forEach(k => delete x[k]); return x; }), deleted:d.gDeleted || [], updated:d.updated || 0 });
 function gbMerge(l, r){
@@ -701,7 +749,7 @@ function gbApply(r){
   if(!r || !r.id) return;
   const l = deckOf(r.id);
   if(!l){
-    const d = fixDeck({ id:r.id, name:r.name, from:r.from, to:r.to, settings:r.settings, subs:r.subs || [], global:true, created:now(), updated:r.updated || 0,
+    const d = fixDeck({ id:r.id, name:r.name, from:r.from, to:r.to, settings:r.settings, subs:r.subs || [], global:true, cls:cls.id, created:now(), updated:r.updated || 0,
       cards:(r.cards || []).map(c => ({ ...c, box:0, due:0, right:0, wrong:0 })), gDeleted:r.deleted || [] });
     d.gIds = d.cards.map(c => c.id); decks.push(d);
   } else {
@@ -713,26 +761,27 @@ function gbApply(r){
   saveLocal(); liveRender();
 }
 async function gbPush(d){
-  const { data:row, error } = await sb.from("global_decks").select("data").eq("id", d.id).maybeSingle(); if(error) throw error;
+  const { data:row, error } = await sb.from("class_decks").select("data").eq("class_id", cls.id).eq("id", d.id).maybeSingle(); if(error) throw error;
   const del = (d.gIds || []).filter(id => !d.cards.some(c => c.id === id));
   d.gDeleted = [...new Set([...(d.gDeleted || []), ...del])];
   if(row && row.data) gbMerge(d, row.data);
   d.gIds = d.cards.map(c => c.id); saveLocal();
-  const { error:e2 } = await sb.from("global_decks").upsert({ id:d.id, data:gbStrip(d), updated_at:new Date(d.updated || now()).toISOString() }, { onConflict:"id" });
+  const { error:e2 } = await sb.from("class_decks").upsert({ class_id:cls.id, id:d.id, data:gbStrip(d), updated_at:new Date(d.updated || now()).toISOString() }, { onConflict:"class_id,id" });
   if(e2) throw e2;
   liveRender();
 }
 async function gbSync(){
-  const { data, error } = await sb.from("global_decks").select("data"); if(error) throw error;
+  const { data, error } = await sb.from("class_decks").select("data").eq("class_id", cls.id); if(error) throw error;
   data.forEach(r => gbApply(r.data));
-  for(const d of decks.filter(x => x.global)) await gbPush(d);
+  if(canEdit()) for(const d of decks.filter(x => x.global && x.cls === cls.id)) await gbPush(d);
 }
 function gbSubscribe(){
-  const ch = sb.channel("global-decks").on("postgres_changes", { event:"*", schema:"public", table:"global_decks" }, p => gbApply(p.new && p.new.data)).subscribe();
+  const ch = sb.channel("class-" + cls.id).on("postgres_changes", { event:"*", schema:"public", table:"class_decks", filter:"class_id=eq." + cls.id }, p => gbApply(p.new && p.new.data)).subscribe();
   sbChans.push(ch);
 }
 function gbQueue(d){
-  if(!d.global || !sb || !sbUser) return;
+  if(!cls || !canEdit() || !sb || !sbUser || (d.cls && d.cls !== cls.id)) return;
+  if(!d.global){ d.global = true; d.cls = cls.id; d.gIds = d.cards.map(c => c.id); }
   clearTimeout(gbTimers[d.id]);
   gbTimers[d.id] = setTimeout(() => gbPush(d).catch(e => setStatus("Global teilen fehlgeschlagen: " + gbErrMsg(e))), 900);
 }
@@ -1082,7 +1131,7 @@ function renderHome(){
         <button id="create">Kapitel anlegen</button>
       </div>
     </div>
-    ${sbPanelHtml()}
+    ${sbPanelHtml()}${clsPanelHtml()}
     <div class="panel">
       <h2 style="font-size:1.15rem">Speichern & Weitergeben</h2>
       <p class="small" style="margin:4px 0 10px">Speichert eine HTML-Datei, in der die Vokabeln schon drin sind. Wer sie öffnet, hat sofort alle ausgewählten Kapitel – auch ohne Internet.</p>
@@ -1148,7 +1197,6 @@ function settingsHtml(d){
     ${d.subs.length ? `<div class="row" style="margin-bottom:8px"><div><label for="setTgt">Gilt für</label><select id="setTgt">
       <option value="">Ganzes Kapitel</option>${d.subs.map(s => `<option value="${s.id}" ${tgt===s.id?"selected":""}>Unterkapitel: ${esc(s.name)}</option>`).join("")}</select></div></div>` : ""}
     ${sub ? `<label class="check"><input type="checkbox" id="ownSet" ${sub.own?"checked":""}> Eigene Einstellungen für dieses Unterkapitel (sonst wie das Kapitel)</label><hr style="border:0;border-top:1px solid var(--line);margin:10px 0">` : ""}
-    ${!sub && sbCfg && !inClaude() ? `<label class="check"><input type="checkbox" id="globSet" ${d.global?"checked":""}> Global teilen – alle Nutzer sehen dieses Kapitel und neue Wörter (Lernstand bleibt privat)</label><hr style="border:0;border-top:1px solid var(--line);margin:10px 0">` : ""}
     ${LABELS.map(([k,l]) => `<label class="check ${locked?"off":""}"><input type="checkbox" data-set="${k}" ${eff[k]?"checked":""} ${locked?"disabled":""}> ${l}</label>`).join("")}
   </div>`;
 }
@@ -1276,7 +1324,6 @@ function renderDeck(){
   document.getElementById("newSub").onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); addSubFn(); } };
   // Einstellungen
   const st = document.getElementById("setTgt"); if(st) st.onchange = () => { view.setTarget = st.value; render(); };
-  const gs = document.getElementById("globSet"); if(gs) gs.onchange = () => { d.global = gs.checked; if(d.global && !d.gIds) d.gIds = d.cards.map(c => c.id); persist(d); setStatus(d.global ? "Kapitel wird global geteilt" : "Kapitel nicht mehr global geteilt (bleibt für andere erhalten)"); };
   const own = document.getElementById("ownSet"); if(own) own.onchange = () => {
     const s = d.subs.find(x => x.id === view.setTarget); s.own = own.checked; if(s.own && !Object.keys(s.settings).length) s.settings = { ...d.settings }; persist(d); render(); };
   app.querySelectorAll("[data-set]").forEach(cb => cb.onchange = () => {
@@ -1706,6 +1753,7 @@ try{ const emb = JSON.parse(document.getElementById("embedded-decks").textConten
   if(emb && emb.sb && emb.sb.url && emb.sb.key && !sbCfg){ sbCfg = { url:emb.sb.url, key:emb.sb.key }; writeJSON(SB_KEY, sbCfg); } }catch(e){}
 loadEmbedded();
 render();
+applyRo();
 if(!inClaude()) sbInit();
 if(window.claude && typeof window.claude.use === "function") initCloud();
 })();
