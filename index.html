@@ -594,7 +594,11 @@ async function sbInit(){
     });
     const { data, error } = await sb.auth.getSession();
     if(error) throw error;
-    if(!data.session && !sbUser){ sbState = "loggedout"; sbRefresh(); }
+    if(!data.session && !sbUser){
+      if(/access_token/.test(location.hash)){ sbState = "loggedout"; sbRefresh(); }
+      else{ const r = await sb.auth.signInAnonymously();
+        if(r.error){ sbState = "loggedout"; sbMsg = "Anonymes Anmelden ist in Supabase noch nicht aktiviert (Authentication → Sign In / Providers → „Allow anonymous sign-ins“)."; sbRefresh(); } }
+    }
     if(/access_token|error_description/.test(location.hash)){
       if(/error_description/.test(location.hash)){ sbMsg = "Der Login-Link ist abgelaufen oder ungültig – fordere einen neuen an."; }
       history.replaceState(null, "", location.pathname + location.search);
@@ -812,7 +816,7 @@ function sbPanelHtml(){
     <div class="row"><div><label for="sbMail">E-Mail</label><input id="sbMail" type="email" autocomplete="email" placeholder="du@beispiel.de"></div><button id="sbSend">Login-Link schicken</button></div>`;
   else if(sbState === "error") body = `<p style="margin:6px 0"><span class="sbdot err"></span>${esc(sbErr)}</p>
     <div class="row" style="margin-top:8px"><button id="sbRetry">Erneut versuchen</button>${sbUser ? `<button class="ghost" id="sbOut">Abmelden</button>` : ""}</div>`;
-  else body = `<p style="margin:6px 0"><span class="sbdot ${dot}"></span>${sbState === "syncing" ? "Synchronisiere …" : "Live-Sync aktiv"}${sbUser ? ` · angemeldet als <b>${esc(sbUser.email || "")}</b>` : ""}</p>
+  else body = `<p style="margin:6px 0"><span class="sbdot ${dot}"></span>${sbState === "syncing" ? "Synchronisiere …" : "Live-Sync aktiv"}${sbUser && sbUser.email ? ` · angemeldet als <b>${esc(sbUser.email)}</b>` : ""}</p>
     <p class="small" style="margin:0 0 10px">Jede Änderung wird sofort hochgeladen und erscheint auf deinen anderen Geräten. Ohne Internet wird lokal gespeichert und später abgeglichen.</p>
     <div class="row"><button class="ghost" id="sbNow">Jetzt synchronisieren</button><button class="ghost" id="sbOut">Abmelden</button></div>`;
   return `<div class="panel" id="sbPanel"><h2 style="font-size:1.15rem">Live-Sync mit Supabase</h2>
